@@ -4,7 +4,8 @@
 *.bin
 secrets.h
 config_local.h
-docs/
+docs/*
+!docs/20260903_014250.jpg
 fpga/**/impl/
 OSC/
 Frequency_Pro_PWM/
