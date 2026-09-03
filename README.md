@@ -1,8 +1,8 @@
 # Sipeed Tang Primer 20K demo
 
-**Status: not shipped.** Work in progress. Not a product and not a release. More is planned.
+**Not finished software.** This is an early start, not a complete game, not a product, and not a release. Expect it to change.
 
-A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly a TOS-style Enterprise; an AI wedge chases and shoots poorly. Vector outlines, orange sun, bounce walls. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump and not a finished port.
+A **space ship fighting game** (in progress) on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly a TOS-style Enterprise; an AI wedge chases and shoots poorly. Vector outlines, orange sun, bounce walls. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump.
 
 ## Hardware
 
@@ -69,4 +69,4 @@ If you keep a separate Gowin tree, copy `fpga/tang20k_lcd/src/` into that projec
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Demo code, no warranty, not a shipped product.
+MIT — see [LICENSE](LICENSE). Early demo code, no warranty, not finished software.
