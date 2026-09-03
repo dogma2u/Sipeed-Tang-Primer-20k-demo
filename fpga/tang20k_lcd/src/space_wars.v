@@ -1,5 +1,6 @@
 // S1 left | S2 right | S3 thrust | S4 fire | S0 reset
-// Enterprise = you; wedge = AI (sloppy chase + inaccurate shots). Bounce walls. No gravity.
+// Enterprise = you; wedge = AI (sloppy chase + inaccurate shots). Bounce walls.
+// Shoot the sun 10× → black hole (gravity on, border red).
 
 module space_wars (
     input  wire       clk,
@@ -14,7 +15,8 @@ module space_wars (
     input  wire       de_now,
     output reg  [4:0] pix_r,
     output reg  [5:0] pix_g,
-    output reg  [4:0] pix_b
+    output reg  [4:0] pix_b,
+    output wire       border_red
 );
 
 localparam integer FB_W   = 800;
@@ -23,6 +25,7 @@ localparam integer FB_SZ  = FB_W * FB_H;
 localparam integer SUN_X  = 400;
 localparam integer SUN_Y  = 240;
 localparam integer SUN_R  = 18;
+localparam integer SUN_HITS_BH = 10; // shots to collapse sun → black hole
 localparam integer MARGIN   = 20;
 localparam integer NSTARS   = 28;
 localparam integer MAXV     = 21;
@@ -39,6 +42,35 @@ localparam integer SC0_OX   = 132;
 localparam integer SC1_MX   = 616;
 localparam integer SC1_TX   = 656;
 localparam integer SC1_OX   = 696;
+localparam integer FRAMES_PER_SEC = 50;
+localparam integer TIMER_START    = 90;   // 1:30
+localparam integer TIMER_BONUS    = 5;
+localparam integer TIMER_MAX      = 599;  // 9:59
+localparam integer TM_MX          = 336;  // center timer minutes digit
+localparam integer TM_SX0         = 384;  // seconds tens
+localparam integer TM_SX1         = 424;  // seconds ones
+localparam integer LIFE_Y         = 82;
+localparam integer LIFE_W         = 12;
+localparam integer LIFE_H         = 10;
+localparam integer LIFE_G         = 6;
+localparam integer LIFE_MAX       = 5;
+localparam integer KILL_FOR_LIFE  = 5;
+localparam integer FUEL_MAX_MS    = 15000; // 15 s of thrust
+localparam integer FUEL_FRAME_MS  = 20;    // ~1 frame at 50 Hz
+localparam integer FUEL_YEL_MS    = 1500;  // 10% of tank
+localparam integer FUEL_RED_MS    = 750;   // 5% of tank
+localparam integer FUEL_X         = 176;  // right of player ones digit
+localparam integer FUEL_Y         = 18;   // align with score top
+localparam integer FUEL_W         = 14;
+localparam integer FUEL_H         = 56;   // same height as score digits
+localparam integer FUEL_T         = 2;
+localparam integer FUEL_INNER_H   = 52;   // FUEL_H - 2*FUEL_T
+localparam integer FUEL_MS_PER_PX = 288;  // ~15000/52
+localparam integer BH_HITS_SUN    = 5;    // player shots into BH → sun returns
+localparam integer GO_X           = 241;
+localparam integer GO_Y           = 219;  // 7*6=42 tall; center at screen mid (240)
+localparam integer GO_SCALE       = 6;
+localparam integer GO_GAP         = 6;
 
 localparam [3:0] ST_IDLE   = 4'd0;
 localparam [3:0] ST_PHYS   = 4'd1;
@@ -105,6 +137,18 @@ reg               boom0_dirty, boom_dirty;
 reg               boom_sel;
 reg signed [7:0]  score0, score1;
 reg               ship_lock;
+reg               game_over;
+reg [9:0]         timer_sec;
+reg [5:0]         frame_cnt;
+reg [2:0]         lives0;
+reg [2:0]         ai_streak;
+reg [14:0]        fuel_ms;
+reg [3:0]         sun_hits;
+reg [2:0]         bh_hits;
+reg               black_hole;
+reg               anti_grav; // sun restored; repulsion from center
+
+assign border_red = black_hole;
 
 reg [4:0]  vi;
 reg [4:0]  ei;
@@ -221,6 +265,178 @@ function pong_minus;
         pong_minus = (px >= ox) && (px < (ox + DIG_W)) &&
                      (py >= (oy + ((DIG_H - DIG_T) / 2))) &&
                      (py <  (oy + ((DIG_H - DIG_T) / 2) + DIG_T));
+    end
+endfunction
+
+function pong_colon;
+    input [9:0] px;
+    input [9:0] py;
+    input [9:0] ox;
+    input [9:0] oy;
+    begin
+        pong_colon =
+            ((px >= ox) && (px < (ox + DIG_T)) &&
+             (py >= (oy + DIG_H/4 - DIG_T/2)) &&
+             (py <  (oy + DIG_H/4 - DIG_T/2 + DIG_T))) ||
+            ((px >= ox) && (px < (ox + DIG_T)) &&
+             (py >= (oy + (3*DIG_H)/4 - DIG_T/2)) &&
+             (py <  (oy + (3*DIG_H)/4 - DIG_T/2 + DIG_T)));
+    end
+endfunction
+
+// Small upright triangle life icon (AI wedge style)
+function life_icon;
+    input [9:0] px;
+    input [9:0] py;
+    input [9:0] ox;
+    input [9:0] oy;
+    reg [9:0] rx;
+    reg [9:0] ry;
+    reg [9:0] half;
+    begin
+        life_icon = 1'b0;
+        if ((px >= ox) && (px < (ox + LIFE_W)) &&
+            (py >= oy) && (py < (oy + LIFE_H))) begin
+            rx = px - ox;
+            ry = py - oy;
+            half = (ry + 10'd1) >>> 1;
+            if ((rx + half >= (LIFE_W / 2)) &&
+                (rx <= (LIFE_W / 2) + half))
+                life_icon = 1'b1;
+        end
+    end
+endfunction
+
+// Vertical hollow border + bottom-up fill for thrust fuel
+function fuel_gauge;
+    input [9:0] px;
+    input [9:0] py;
+    input [9:0] fill_h;
+    reg         in_box;
+    reg         on_border;
+    reg         in_fill;
+    begin
+        in_box = (px >= FUEL_X) && (px < (FUEL_X + FUEL_W)) &&
+                 (py >= FUEL_Y) && (py < (FUEL_Y + FUEL_H));
+        on_border = in_box &&
+                    ((px < (FUEL_X + FUEL_T)) ||
+                     (px >= (FUEL_X + FUEL_W - FUEL_T)) ||
+                     (py < (FUEL_Y + FUEL_T)) ||
+                     (py >= (FUEL_Y + FUEL_H - FUEL_T)));
+        // fill grows upward from the bottom of the inner bar
+        in_fill = (fill_h != 10'd0) &&
+                  (px >= (FUEL_X + FUEL_T)) &&
+                  (px < (FUEL_X + FUEL_W - FUEL_T)) &&
+                  (py >= (FUEL_Y + FUEL_H - FUEL_T - fill_h)) &&
+                  (py < (FUEL_Y + FUEL_H - FUEL_T));
+        fuel_gauge = on_border || in_fill;
+    end
+endfunction
+
+// 5x7 block glyphs: 0=G 1=A 2=M 3=E 4=O 5=V 6=R 7=space
+function [4:0] glyph_row;
+    input [2:0] ch;
+    input [2:0] row;
+    begin
+        case (ch)
+            3'd0: case (row) // G
+                3'd0: glyph_row=5'b01110; 3'd1: glyph_row=5'b10001;
+                3'd2: glyph_row=5'b10000; 3'd3: glyph_row=5'b10111;
+                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+                default: glyph_row=5'b01110;
+            endcase
+            3'd1: case (row) // A
+                3'd0: glyph_row=5'b01110; 3'd1: glyph_row=5'b10001;
+                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b11111;
+                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+                default: glyph_row=5'b10001;
+            endcase
+            3'd2: case (row) // M
+                3'd0: glyph_row=5'b10001; 3'd1: glyph_row=5'b11011;
+                3'd2: glyph_row=5'b10101; 3'd3: glyph_row=5'b10001;
+                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+                default: glyph_row=5'b10001;
+            endcase
+            3'd3: case (row) // E
+                3'd0: glyph_row=5'b11111; 3'd1: glyph_row=5'b10000;
+                3'd2: glyph_row=5'b10000; 3'd3: glyph_row=5'b11110;
+                3'd4: glyph_row=5'b10000; 3'd5: glyph_row=5'b10000;
+                default: glyph_row=5'b11111;
+            endcase
+            3'd4: case (row) // O
+                3'd0: glyph_row=5'b01110; 3'd1: glyph_row=5'b10001;
+                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b10001;
+                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+                default: glyph_row=5'b01110;
+            endcase
+            3'd5: case (row) // V
+                3'd0: glyph_row=5'b10001; 3'd1: glyph_row=5'b10001;
+                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b10001;
+                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b01010;
+                default: glyph_row=5'b00100;
+            endcase
+            3'd6: case (row) // R
+                3'd0: glyph_row=5'b11110; 3'd1: glyph_row=5'b10001;
+                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b11110;
+                3'd4: glyph_row=5'b10100; 3'd5: glyph_row=5'b10010;
+                default: glyph_row=5'b10001;
+            endcase
+            default: glyph_row = 5'b00000; // space
+        endcase
+    end
+endfunction
+
+function block_letter;
+    input [9:0] px;
+    input [9:0] py;
+    input [9:0] ox;
+    input [9:0] oy;
+    input [2:0] ch;
+    reg [9:0] rx;
+    reg [9:0] ry;
+    reg [9:0] qcol;
+    reg [9:0] qrow;
+    reg [2:0] col;
+    reg [2:0] row;
+    reg [4:0] bits;
+    begin
+        block_letter = 1'b0;
+        if ((ch != 3'd7) &&
+            (px >= ox) && (px < (ox + 5*GO_SCALE)) &&
+            (py >= oy) && (py < (oy + 7*GO_SCALE))) begin
+            rx   = px - ox;
+            ry   = py - oy;
+            qcol = rx / GO_SCALE;
+            qrow = ry / GO_SCALE;
+            col  = qcol[2:0];
+            row  = qrow[2:0];
+            bits = glyph_row(ch, row);
+            case (col)
+                3'd0: if (bits[4]) block_letter = 1'b1;
+                3'd1: if (bits[3]) block_letter = 1'b1;
+                3'd2: if (bits[2]) block_letter = 1'b1;
+                3'd3: if (bits[1]) block_letter = 1'b1;
+                3'd4: if (bits[0]) block_letter = 1'b1;
+                default: block_letter = 1'b0;
+            endcase
+        end
+    end
+endfunction
+
+function game_over_text;
+    input [9:0] px;
+    input [9:0] py;
+    begin
+        // pitch = 5*GO_SCALE + GO_GAP = 36; GO_Y=219 centers 42px tall text on 480
+        game_over_text =
+            block_letter(px, py, 10'd241, 10'd219, 3'd0) || // G
+            block_letter(px, py, 10'd277, 10'd219, 3'd1) || // A
+            block_letter(px, py, 10'd313, 10'd219, 3'd2) || // M
+            block_letter(px, py, 10'd349, 10'd219, 3'd3) || // E
+            block_letter(px, py, 10'd421, 10'd219, 3'd4) || // O
+            block_letter(px, py, 10'd457, 10'd219, 3'd5) || // V
+            block_letter(px, py, 10'd493, 10'd219, 3'd3) || // E
+            block_letter(px, py, 10'd529, 10'd219, 3'd6);   // R
     end
 endfunction
 
@@ -454,11 +670,12 @@ endtask
 
 task respawn0;
     begin
-        pos0_x <= 24'sd140 <<< 8;
-        pos0_y <= 24'sd240 <<< 8;
-        vel0_x <= 16'sd0;
-        vel0_y <= -16'sd40;
-        ang0   <= 8'd192;
+        pos0_x  <= 24'sd140 <<< 8;
+        pos0_y  <= 24'sd240 <<< 8;
+        vel0_x  <= 16'sd0;
+        vel0_y  <= -16'sd40;
+        ang0    <= 8'd192;
+        fuel_ms <= FUEL_MAX_MS[14:0];
     end
 endtask
 
@@ -498,7 +715,7 @@ end
 wire signed [15:0] sdx_d = $signed({6'b0, pix_x_d}) - 16'sd400;
 wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
-wire in_sun = in_fb_d && (srr_d <= (SUN_R * SUN_R));
+wire in_sun = in_fb_d && !black_hole && (srr_d <= (SUN_R * SUN_R));
 
 wire [7:0] score0_abs = score0[7] ? (~score0 + 8'd1) : score0;
 wire [7:0] score1_abs = score1[7] ? (~score1 + 8'd1) : score1;
@@ -506,8 +723,29 @@ wire [3:0] s0_tens = dec_tens(score0_abs[6:0]);
 wire [3:0] s1_tens = dec_tens(score1_abs[6:0]);
 wire [6:0] s0_ten10 = {s0_tens, 3'b0} + {2'b0, s0_tens, 1'b0};
 wire [6:0] s1_ten10 = {s1_tens, 3'b0} + {2'b0, s1_tens, 1'b0};
-wire [3:0] s0_ones = score0_abs[6:0] - s0_ten10;
-wire [3:0] s1_ones = score1_abs[6:0] - s1_ten10;
+wire [6:0] s0_ones7 = score0_abs[6:0] - s0_ten10;
+wire [6:0] s1_ones7 = score1_abs[6:0] - s1_ten10;
+wire [3:0] s0_ones = s0_ones7[3:0];
+wire [3:0] s1_ones = s1_ones7[3:0];
+wire [3:0] tm_min  = (timer_sec >= 10'd540) ? 4'd9 :
+                     (timer_sec >= 10'd480) ? 4'd8 :
+                     (timer_sec >= 10'd420) ? 4'd7 :
+                     (timer_sec >= 10'd360) ? 4'd6 :
+                     (timer_sec >= 10'd300) ? 4'd5 :
+                     (timer_sec >= 10'd240) ? 4'd4 :
+                     (timer_sec >= 10'd180) ? 4'd3 :
+                     (timer_sec >= 10'd120) ? 4'd2 :
+                     (timer_sec >= 10'd60)  ? 4'd1 : 4'd0;
+wire [9:0] tm_rem  = timer_sec - ({6'b0, tm_min} * 10'd60);
+wire [3:0] tm_stens = dec_tens(tm_rem[6:0]);
+wire [6:0] tm_sten10 = {tm_stens, 3'b0} + {2'b0, tm_stens, 1'b0};
+wire [6:0] tm_sones7 = tm_rem[6:0] - tm_sten10;
+wire [3:0] tm_sones = tm_sones7[3:0];
+wire       timer_hit =
+    pong_digit(pix_x_d, pix_y_d, 10'd336, 10'd18, tm_min) ||
+    pong_colon(pix_x_d, pix_y_d, 10'd372, 10'd18) ||
+    pong_digit(pix_x_d, pix_y_d, 10'd384, 10'd18, tm_stens) ||
+    pong_digit(pix_x_d, pix_y_d, 10'd424, 10'd18, tm_sones);
 wire       score_hit =
     (score0[7] && pong_minus(pix_x_d, pix_y_d, 10'd52,  10'd18)) ||
     pong_digit(pix_x_d, pix_y_d, 10'd92,  10'd18, s0_tens) ||
@@ -515,6 +753,22 @@ wire       score_hit =
     (score1[7] && pong_minus(pix_x_d, pix_y_d, 10'd616, 10'd18)) ||
     pong_digit(pix_x_d, pix_y_d, 10'd656, 10'd18, s1_tens) ||
     pong_digit(pix_x_d, pix_y_d, 10'd696, 10'd18, s1_ones);
+wire       lives0_hit =
+    ((lives0 > 3'd0) && life_icon(pix_x_d, pix_y_d, 10'd92,  10'd82)) ||
+    ((lives0 > 3'd1) && life_icon(pix_x_d, pix_y_d, 10'd110, 10'd82)) ||
+    ((lives0 > 3'd2) && life_icon(pix_x_d, pix_y_d, 10'd128, 10'd82)) ||
+    ((lives0 > 3'd3) && life_icon(pix_x_d, pix_y_d, 10'd146, 10'd82)) ||
+    ((lives0 > 3'd4) && life_icon(pix_x_d, pix_y_d, 10'd164, 10'd82));
+wire [14:0] fuel_px =
+    (fuel_ms >= FUEL_MAX_MS[14:0]) ? FUEL_INNER_H[14:0] :
+    (fuel_ms / FUEL_MS_PER_PX[14:0]);
+wire [9:0] fuel_fill_h =
+    (fuel_px > FUEL_INNER_H[14:0]) ? FUEL_INNER_H[9:0] : fuel_px[9:0];
+wire       fuel_hit = fuel_gauge(pix_x_d, pix_y_d, fuel_fill_h);
+// 2 flashes/sec @ ~50% duty while frame_cnt runs 0..49
+wire       go_flash = (frame_cnt < 6'd13) ||
+                      ((frame_cnt >= 6'd25) && (frame_cnt < 6'd38));
+wire       go_hit   = game_over && go_flash && game_over_text(pix_x_d, pix_y_d);
 
 wire signed [15:0] boom_cx   = boom_sel ? boom_x : boom0_x;
 wire signed [15:0] boom_cy   = boom_sel ? boom_y : boom0_y;
@@ -522,7 +776,25 @@ wire [4:0]         boom_clen = boom_sel ? boom_len_prev : boom0_len_prev;
 wire [4:0]         boom_cnt  = boom_sel ? boom1 : boom0;
 
 always @(posedge clk) begin
-    if (in_sun) begin
+    if (in_fb_d && go_hit) begin
+        pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00; // bright red
+    end else if (in_fb_d && timer_hit) begin
+        if (timer_sec < 10'd10) begin
+            pix_r <= 5'h19; pix_g <= 6'h00; pix_b <= 5'h00; // red, -20%
+        end else if (timer_sec < 10'd30) begin
+            pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h00; // yellow, -20%
+        end else begin
+            pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h19; // white, -20%
+        end
+    end else if (in_fb_d && fuel_hit) begin
+        if (fuel_ms <= FUEL_RED_MS[14:0]) begin
+            pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00; // ≤5%
+        end else if (fuel_ms <= FUEL_YEL_MS[14:0]) begin
+            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h00; // ≤10%
+        end else begin
+            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // green
+        end
+    end else if (in_sun) begin
         if (srr_d < 32'sd80) begin
             pix_r <= 5'h1F; pix_g <= 6'h30; pix_b <= 5'h04;
         end else if (srr_d < 32'sd200) begin
@@ -530,7 +802,10 @@ always @(posedge clk) begin
         end else begin
             pix_r <= 5'h18; pix_g <= 6'h14; pix_b <= 5'h00;
         end
-    end else if (in_fb_d && (rdata || score_hit)) begin
+    end else if (in_fb_d && score_hit) begin
+        // light blue @ full brightness
+        pix_r <= 5'h0C; pix_g <= 6'h3C; pix_b <= 5'h1F;
+    end else if (in_fb_d && (rdata || lives0_hit)) begin
         pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else begin
         pix_r <= 5'd0; pix_g <= 6'd0; pix_b <= 5'd0;
@@ -574,26 +849,86 @@ always @(posedge clk or negedge rst_n) begin
         score0         <= 8'sd0;
         score1         <= 8'sd0;
         ship_lock      <= 1'b0;
+        game_over      <= 1'b0;
+        timer_sec      <= TIMER_START[9:0];
+        frame_cnt      <= 6'd0;
+        lives0         <= 3'd3;
+        ai_streak      <= 3'd0;
+        fuel_ms        <= FUEL_MAX_MS[14:0];
+        sun_hits       <= 4'd0;
+        bh_hits        <= 3'd0;
+        black_hole     <= 1'b0;
+        anti_grav      <= 1'b0;
         respawn0;
         respawn1;
     end else begin
         plot_en <= 1'b0;
-        if (fire_p)
+        if (fire_p && !game_over)
             fire_hold <= 1'b1;
 
         case (state)
             ST_IDLE: if (frame_start) begin
+                // Always tick frame_cnt (timer + GAME OVER 2 Hz blink)
+                if (frame_cnt == (FRAMES_PER_SEC[5:0] - 6'd1)) begin
+                    frame_cnt <= 6'd0;
+                    if (!game_over) begin
+                        if (timer_sec == 10'd0)
+                            game_over <= 1'b1;
+                        else
+                            timer_sec <= timer_sec - 10'd1;
+                    end
+                end else
+                    frame_cnt <= frame_cnt + 6'd1;
                 phys_phase <= 3'd0;
                 state <= ST_PHYS;
             end
 
             // ---- physics: human needle + AI wedge ----
             ST_PHYS: begin
-                case (phys_phase)
+                if (game_over) begin
+                    thrusting0  <= 1'b0;
+                    thrusting1  <= 1'b0;
+                    fire_hold   <= 1'b0;
+                    bullet_on   <= 1'b0;
+                    ebul_on     <= 1'b0;
+                    if (boom0 == 5'd1) begin
+                        pos0_x <= -(24'sd80 <<< 8);
+                        pos0_y <= -(24'sd80 <<< 8);
+                        vel0_x <= 16'sd0;
+                        vel0_y <= 16'sd0;
+                    end
+                    if (boom1 == 5'd1) begin
+                        pos1_x <= ((FB_W + 80) <<< 8);
+                        pos1_y <= ((FB_H + 80) <<< 8);
+                        vel1_x <= 16'sd0;
+                        vel1_y <= 16'sd0;
+                    end
+                    if (boom0 != 5'd0)
+                        boom0 <= boom0 - 5'd1;
+                    if (boom1 != 5'd0)
+                        boom1 <= boom1 - 5'd1;
+                    ship_sel    <= 1'b0;
+                    line_active <= 1'b0;
+                    plot_bit    <= 1'b0;
+                    ei          <= 4'd0;
+                    if (have_prev0 || have_prev1)
+                        state <= ST_ERASE;
+                    else begin
+                        si <= 5'd0;
+                        state <= ST_STARS;
+                    end
+                end else case (phys_phase)
                     3'd0: begin
                         if (left_p)  ang0 <= ang0 - 8'd4;
                         if (right_p) ang0 <= ang0 + 8'd4;
-                        thrusting0 <= thrust_p;
+                        if (thrust_p && (fuel_ms != 15'd0) && (boom0 == 5'd0)) begin
+                            thrusting0 <= 1'b1;
+                            if (fuel_ms > FUEL_FRAME_MS[14:0])
+                                fuel_ms <= fuel_ms - FUEL_FRAME_MS[14:0];
+                            else
+                                fuel_ms <= 15'd0;
+                        end else
+                            thrusting0 <= 1'b0;
                         dx <= $signed(pos0_x[23:8]) - $signed(pos1_x[23:8]);
                         dy <= $signed(pos0_y[23:8]) - $signed(pos1_y[23:8]);
                         lfsr <= {lfsr[6:0], lfsr[7] ^ lfsr[5] ^ lfsr[4] ^ lfsr[3]};
@@ -639,10 +974,26 @@ always @(posedge clk or negedge rst_n) begin
                         phys_phase <= 3'd5;
                     end
                     3'd5: begin
-                        vel0_x <= vel0_x + mul_q88(cos_a, thrusting0 ? 16'sd40 : 16'sd0)
-                                  - (vel0_x >>> 8);
-                        vel0_y <= vel0_y + mul_q88(sin_a, thrusting0 ? 16'sd40 : 16'sd0)
-                                  - (vel0_y >>> 8);
+                        begin : grav0
+                            reg signed [15:0] gdx, gdy, gx, gy;
+                            gdx = 16'sd400 - $signed(pos0_x[23:8]);
+                            gdy = 16'sd240 - $signed(pos0_y[23:8]);
+                            // BH: soft pull; anti_grav: soft push; thrust (~40) can overcome
+                            if (black_hole) begin
+                                gx = gdx >>> 5;
+                                gy = gdy >>> 5;
+                            end else if (anti_grav) begin
+                                gx = -(gdx >>> 5);
+                                gy = -(gdy >>> 5);
+                            end else begin
+                                gx = 16'sd0;
+                                gy = 16'sd0;
+                            end
+                            vel0_x <= vel0_x + mul_q88(cos_a, thrusting0 ? 16'sd40 : 16'sd0)
+                                      + gx - (vel0_x >>> 8);
+                            vel0_y <= vel0_y + mul_q88(sin_a, thrusting0 ? 16'sd40 : 16'sd0)
+                                      + gy - (vel0_y >>> 8);
+                        end
                         // Fire while cos/sin = player heading
                         if (fire_cd != 5'd0)
                             fire_cd <= fire_cd - 5'd1;
@@ -666,10 +1017,25 @@ always @(posedge clk or negedge rst_n) begin
                         phys_phase <= 3'd6;
                     end
                     3'd6: begin
-                        vel1_x <= vel1_x + mul_q88(cos_a, thrusting1 ? 16'sd32 : 16'sd0)
-                                  - (vel1_x >>> 8);
-                        vel1_y <= vel1_y + mul_q88(sin_a, thrusting1 ? 16'sd32 : 16'sd0)
-                                  - (vel1_y >>> 8);
+                        begin : grav1
+                            reg signed [15:0] gdx, gdy, gx, gy;
+                            gdx = 16'sd400 - $signed(pos1_x[23:8]);
+                            gdy = 16'sd240 - $signed(pos1_y[23:8]);
+                            if (black_hole) begin
+                                gx = gdx >>> 5;
+                                gy = gdy >>> 5;
+                            end else if (anti_grav) begin
+                                gx = -(gdx >>> 5);
+                                gy = -(gdy >>> 5);
+                            end else begin
+                                gx = 16'sd0;
+                                gy = 16'sd0;
+                            end
+                            vel1_x <= vel1_x + mul_q88(cos_a, thrusting1 ? 16'sd32 : 16'sd0)
+                                      + gx - (vel1_x >>> 8);
+                            vel1_y <= vel1_y + mul_q88(sin_a, thrusting1 ? 16'sd32 : 16'sd0)
+                                      + gy - (vel1_y >>> 8);
+                        end
                         // Wide cone + side miss; long irregular cooldown
                         if (ai_cd != 6'd0)
                             ai_cd <= ai_cd - 6'd1;
@@ -737,7 +1103,18 @@ always @(posedge clk or negedge rst_n) begin
                     dy <= $signed(pos1_y[23:8]) - 16'sd240;
                     ei <= 4'd2;
                 end else if (ei == 4'd2) begin
-                    if (r2 < 32'sd400) respawn0;
+                    // Player into sun / black-hole core: boom + lose a life
+                    if ((r2 < 32'sd400) && (boom0 == 5'd0)) begin
+                        boom0       <= BOOM_N[4:0];
+                        boom0_dirty <= 1'b1;
+                        boom0_x     <= $signed(pos0_x[23:8]);
+                        boom0_y     <= $signed(pos0_y[23:8]);
+                        if (lives0 != 3'd0) begin
+                            if (lives0 == 3'd1)
+                                game_over <= 1'b1;
+                            lives0 <= lives0 - 3'd1;
+                        end
+                    end
                     r2 <= dx * dx + dy * dy;
                     ei <= 4'd3;
                 end else if (ei == 4'd3) begin
@@ -754,8 +1131,16 @@ always @(posedge clk or negedge rst_n) begin
                         if (ebul_life != 6'd0)
                             ebul_life <= ebul_life - 6'd1;
                     end
-                    if (boom0 == 5'd1)
-                        respawn0;
+                    if (boom0 == 5'd1) begin
+                        if (lives0 != 3'd0)
+                            respawn0;
+                        else begin
+                            pos0_x <= -(24'sd80 <<< 8);
+                            pos0_y <= -(24'sd80 <<< 8);
+                            vel0_x <= 16'sd0;
+                            vel0_y <= 16'sd0;
+                        end
+                    end
                     if (boom1 == 5'd1)
                         respawn1;
                     if (boom0 != 5'd0)
@@ -766,9 +1151,20 @@ always @(posedge clk or negedge rst_n) begin
                 end else begin : hits
                     reg signed [15:0] bdx, bdy, adx, ady;
                     reg signed [7:0]  n0, n1;
+                    reg [2:0]         nl0, nst;
+                    reg [9:0]         nt;
+                    reg [3:0]         nsh;
+                    reg [2:0]         nbh;
                     reg               hit_ai, hit_pl, ram;
+                    reg               sun_p, sun_e;
                     n0 = score0; n1 = score1;
+                    nl0 = lives0;
+                    nst = ai_streak;
+                    nt  = timer_sec;
+                    nsh = sun_hits;
+                    nbh = bh_hits;
                     hit_ai = 1'b0; hit_pl = 1'b0; ram = 1'b0;
+                    sun_p = 1'b0; sun_e = 1'b0;
                     if (bullet_on) begin
                         if ((bul_life == 6'd0) ||
                             (bul_x < (MARGIN <<< 8)) ||
@@ -791,8 +1187,10 @@ always @(posedge clk or negedge rst_n) begin
                             end else begin
                                 bdx = $signed(bul_x[23:8]) - 16'sd400;
                                 bdy = $signed(bul_y[23:8]) - 16'sd240;
-                                if ((bdx * bdx + bdy * bdy) < 32'sd400)
+                                if ((bdx * bdx + bdy * bdy) < 32'sd400) begin
                                     bullet_on <= 1'b0;
+                                    sun_p = 1'b1;
+                                end
                             end
                         end
                     end
@@ -818,11 +1216,32 @@ always @(posedge clk or negedge rst_n) begin
                             end else begin
                                 bdx = $signed(ebul_x[23:8]) - 16'sd400;
                                 bdy = $signed(ebul_y[23:8]) - 16'sd240;
-                                if ((bdx * bdx + bdy * bdy) < 32'sd400)
+                                if ((bdx * bdx + bdy * bdy) < 32'sd400) begin
                                     ebul_on <= 1'b0;
+                                    sun_e = 1'b1;
+                                end
                             end
                         end
                     end
+                    if (black_hole) begin
+                        // Player shots into BH restore the sun (anti-gravity)
+                        if (sun_p) begin
+                            if (nbh == (BH_HITS_SUN[2:0] - 3'd1)) begin
+                                black_hole <= 1'b0;
+                                anti_grav  <= 1'b1;
+                                bh_hits    <= 3'd0;
+                            end else
+                                bh_hits <= nbh + 3'd1;
+                        end
+                    end else if (!anti_grav) begin
+                        // Normal sun: 10 hits → black hole
+                        if (sun_p && (nsh < 4'd15)) nsh = nsh + 4'd1;
+                        if (sun_e && (nsh < 4'd15)) nsh = nsh + 4'd1;
+                        sun_hits <= nsh;
+                        if (nsh >= SUN_HITS_BH[3:0])
+                            black_hole <= 1'b1;
+                    end
+                    // anti_grav: sun is back; core still lethal; no further mode change
                     bdx = $signed(pos0_x[23:8]) - $signed(pos1_x[23:8]);
                     bdy = $signed(pos0_y[23:8]) - $signed(pos1_y[23:8]);
                     adx = bdx[15] ? -bdx : bdx;
@@ -852,8 +1271,29 @@ always @(posedge clk or negedge rst_n) begin
                         if (n0 > -8'sd99) n0 = n0 - 8'sd1;
                         if (n1 > -8'sd99) n1 = n1 - 8'sd1;
                     end
-                    score0 <= n0;
-                    score1 <= n1;
+                    if (hit_pl && (nl0 != 3'd0))
+                        nl0 = nl0 - 3'd1;
+                    if (hit_ai) begin
+                        if (nst == (KILL_FOR_LIFE[2:0] - 3'd1)) begin
+                            nst = 3'd0;
+                            if (nl0 < LIFE_MAX[2:0])
+                                nl0 = nl0 + 3'd1;
+                        end else
+                            nst = nst + 3'd1;
+                    end
+                    if (hit_ai || hit_pl) begin
+                        if (nt > (TIMER_MAX[9:0] - TIMER_BONUS[9:0]))
+                            nt = TIMER_MAX[9:0];
+                        else
+                            nt = nt + TIMER_BONUS[9:0];
+                    end
+                    score0    <= n0;
+                    score1    <= n1;
+                    lives0    <= nl0;
+                    ai_streak <= nst;
+                    timer_sec <= nt;
+                    if (nl0 == 3'd0)
+                        game_over <= 1'b1;
                     ship_sel    <= 1'b0;
                     line_active <= 1'b0;
                     plot_bit    <= 1'b0;

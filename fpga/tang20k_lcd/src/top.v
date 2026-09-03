@@ -32,6 +32,7 @@ wire [9:0] pix_x;
 wire [9:0] pix_y;
 wire       de_now;
 wire       frame_start;
+wire       border_red;
 
 assign lcd_bl = 1'b1;
 
@@ -47,6 +48,7 @@ lcd_timing u_lcd (
     .pix_r_i(pix_r),
     .pix_g_i(pix_g),
     .pix_b_i(pix_b),
+    .border_red(border_red),
     .lcd_clk(lcd_clk),
     .lcd_hsync(lcd_hsync),
     .lcd_vsync(lcd_vsync),
@@ -73,7 +75,8 @@ space_wars u_game (
     .de_now(de_now),
     .pix_r(pix_r),
     .pix_g(pix_g),
-    .pix_b(pix_b)
+    .pix_b(pix_b),
+    .border_red(border_red)
 );
 
 endmodule
