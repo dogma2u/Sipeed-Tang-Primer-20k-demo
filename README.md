@@ -49,19 +49,19 @@ A crash also bounces the ships apart so it only counts once. Shot kills still bo
 
 ## How it works
 
-**Scanout.** `lcd_timing.v` generates 800×480 timing and overlays the border. Game pixels come from `space_wars.v`.
+**Scanout.** Back to front: HUD (scores, timer, lives, fuel) → ships/shots (Enterprise **green**, AI **white**) → starfield → sun / black hole. **GAME OVER** stays on top.
 
-**Framebuffer.** One **800×480 1-bit** BRAM (`fb_ram.v`) holds vector ink (ships, stars, shots, explosions). Double-buffering does not fit in 46 BSRAM. The buffer is cleared **once at boot**. After that the game **erases last frame’s lines and draws the new ones**. A full clear every frame races the LCD beam and leaves you with a blank screen.
+**Framebuffer.** One **800×480 1-bit** BRAM (`fb_ram.v`) holds vector ink (ships, shots, explosions). Stars are composited at scanout so they sit in front of the ships. Double-buffering does not fit in 46 BSRAM. The buffer is cleared **once at boot**. After that the game **erases last frame’s lines and draws the new ones**.
 
-**Sun.** Not stored in the 1-bit FB. During scanout it is composited as an orange, limb-darkened circle at (400, 240), radius 18. Ships bounce on the playfield margin. Hitting the sun (or black-hole / restored-sun core) **costs the player a life** and booms; the AI just respawns. After **10 shots** hit the sun (player or AI), it collapses into a **black hole**: the orange sun vanishes, soft center gravity turns on (thrust can overcome it), and the screen **border turns red**. If the **player** then shoots the black-hole core **5 times**, the **sun returns** with **negative gravity** (soft push outward; thrust can overcome it) and the border goes back to white.
+**Sun.** Not stored in the 1-bit FB. During scanout it is composited as an orange, limb-darkened circle at (400, 240), radius 18, **in front of the ships**. Ships bounce on the playfield margin. Hitting the sun (or black-hole / restored-sun core) **costs the player a life** and booms; the AI just respawns. After **10 shots** hit the sun (player or AI), it collapses into a **black hole**: the orange sun vanishes (dark disk still in front of ships), soft center gravity turns on (thrust can overcome it), and the screen **border turns red**. If the **player** then shoots the black-hole core **5 times**, the **sun returns** with **negative gravity** (soft push outward; thrust can overcome it) and the border goes back to white.
 
-**Ships.** Outlines are small integer vertices, rotated with `sin_cos.v` (angle 0..255). Positions are 24-bit Q8.8 so they do not wrap at 16-bit. Walls bounce.
+**Ships.** Outlines are small integer vertices, rotated with `sin_cos.v` (angle 0..255). Positions are 24-bit Q8.8 so they do not wrap at 16-bit. Walls bounce. Enterprise is **green**; the AI wedge is **bright white**. They draw over the HUD.
 
-**AI.** The wedge turns toward the Enterprise, slowly and with skipped frames, coasts when close, and fires on a long cooldown with a wide cone and a random side miss. Each side has its own shot. A hit is an expanding X, then respawn.
+**AI.** Starts at **half** the player thrust and ramps to **full** player thrust over **5 minutes** of play. Every **10 seconds** it turns harder, fires more often, and can shoot **left, center, and/or right** at once (all three when it gets mean). A hit is an expanding X, then respawn.
 
-**Stars.** 28 constellation points are replotted every frame so erase/redraw does not wipe the sky.
+**Stars.** 28 constellation points are composited at scanout **in front of the ships**.
 
-Per-frame flow (simplified): physics → bounce / sun / shots → erase old vectors → plot stars → transform and stroke ships → draw shot streaks → boom if needed.
+Per-frame flow (simplified): physics → bounce / sun / shots → erase old vectors → transform and stroke ships → draw shot streaks → boom if needed.
 
 ## Source (what Gowin builds)
 
