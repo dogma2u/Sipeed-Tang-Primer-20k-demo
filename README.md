@@ -2,7 +2,7 @@
 
 **This is starting to look like a real game.** Still a work in progress on FPGA — expect more changes — but the match loop (timer, lives, fuel, sun / black hole) plays through on the Dock + 5" LCD.
 
-A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly a TOS-style Enterprise; an AI wedge chases and shoots poorly. Vector outlines, orange sun (and black hole), bounce walls, scores, fuel, and a countdown. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump.
+A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly a TOS-style Enterprise; a yellow AI wedge hunts and shoots. Vector outlines, orange sun (and black hole), bounce walls, scores, fuel, and a countdown. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump.
 
 Version **0.2.0** — see [CHANGELOG.md](CHANGELOG.md).
 
@@ -34,7 +34,7 @@ You fly a top-down TOS-style Enterprise. The other ship is an Asteroids-style we
 
 ## Scoreboard
 
-Pong-style **block digits** at the top of the LCD: **player left**, **AI right** (bright light blue), and a **M:SS countdown** in the center (starts at **1:30**). Timer turns **yellow** under 0:30 and **red** under 0:10. Two score digits each. If a score goes below zero, a minus bar appears next to it. Range is −99 to 99. Under the **player** score are **wedge life icons** (start with 3, max 5); a shot that kills you removes one. Every **5 AI kills** grants an extra life if you have fewer than 5. To the right of the player score is a **vertical fuel bar** (same height as the score digits, **15 s** of thrust): **green**, **yellow** at ≤10% left, **red** at ≤5%; empty means no thrust until you respawn with a full tank. The AI has **unlimited** ships (no life icons, never ends the game by AI deaths). **S0** reset clears scores, player lives, fuel, and the timer.
+Pong-style **block digits** at the top of the LCD: **player left**, **AI right** (bright light blue), and a **M:SS countdown** in the center (starts at **1:30**). Timer turns **yellow** under 0:30 and **red** under 0:10. **Three score digits** each with **leading-zero blanking** (range −999 to 999). If a score goes below zero, a minus bar appears. Under the **player** score are **wedge life icons** (start with 3, max 5); a shot that kills you removes one. Every **5 AI kills** grants an extra life if you have fewer than 5. To the right of the player score is a **vertical fuel bar** (same height as the score digits, **15 s** of thrust): **green**, **yellow** at ≤10% left, **red** at ≤5%; empty means no thrust until you respawn with a full tank. The AI has **unlimited** ships (no life icons, never ends the game by AI deaths). **S0** reset clears scores, player lives, fuel, and the timer.
 
 | Event | Player (left) | AI (right) | Timer |
 |---|---|---|---|
@@ -49,19 +49,21 @@ A crash also bounces the ships apart so it only counts once. Shot kills still bo
 
 ## How it works
 
-**Scanout.** Back to front: HUD (scores, timer, lives, fuel) → ships/shots (Enterprise **green**, AI **white**) → starfield → sun / black hole. **GAME OVER** stays on top.
+**Scanout.** Overlay stack, back to front: HUD → 2-bit FB ink (Enterprise green, AI/shots white) → star ROM → sun / black hole. **GAME OVER** on top. Colors are written when vectors are stroked, not guessed from ship boxes.
 
-**Framebuffer.** One **800×480 1-bit** BRAM (`fb_ram.v`) holds vector ink (ships, shots, explosions). Stars are composited at scanout so they sit in front of the ships. Double-buffering does not fit in 46 BSRAM. The buffer is cleared **once at boot**. After that the game **erases last frame’s lines and draws the new ones**.
+**Modules.** Game logic is split: `sw_physics.v` (AI, gravity, shots, scores), `sw_draw.v` (erase/stroke/boom), `sw_scanout.v` (LCD composite). `space_wars.v` is thin glue plus shared `sin_cos` / `fb_ram`. Shots use one indexed bank of 4 (player + up to 3 AI). Constants are local to each module (Gowin Education does not reliably `` `include `` headers).
 
-**Sun.** Not stored in the 1-bit FB. During scanout it is composited as an orange, limb-darkened circle at (400, 240), radius 18, **in front of the ships**. Ships bounce on the playfield margin. Hitting the sun (or black-hole / restored-sun core) **costs the player a life** and booms; the AI just respawns. After **10 shots** hit the sun (player or AI), it collapses into a **black hole**: the orange sun vanishes (dark disk still in front of ships), soft center gravity turns on (thrust can overcome it), and the screen **border turns red**. If the **player** then shoots the black-hole core **5 times**, the **sun returns** with **negative gravity** (soft push outward; thrust can overcome it) and the border goes back to white.
+**Framebuffer.** 800×470 **2-bit** BRAM (color at draw: empty / player / AI / shots). Full 800×480×2 overflows the 20K’s 46 BSRAM, so the bottom 10 LCD lines stay black. Stars are a tiny coordinate ROM at scanout (in front of ships). Double-buffering does not fit; erase/redraw is used after a boot clear.
 
-**Ships.** Outlines are small integer vertices, rotated with `sin_cos.v` (angle 0..255). Positions are 24-bit Q8.8 so they do not wrap at 16-bit. Walls bounce. Enterprise is **green**; the AI wedge is **bright white**. They draw over the HUD.
+**Sun.** Not stored in the FB. During scanout it is composited as an orange circle at (400, 240), radius 18, **in front of the ships**. Hitting the sun (or black-hole / restored-sun core) **costs the player a life**. After **10 shots** hit the sun, it becomes a **black hole** with **1/r²** gravity (thrust can still fight it) and a **red border**. **5 player shots** into the hole restore the sun with **outward 1/r²** push.
 
-**AI.** Starts at **half** the player thrust and ramps to **full** player thrust over **5 minutes** of play. Every **10 seconds** it turns harder, fires more often, and can shoot **left, center, and/or right** at once (all three when it gets mean). A hit is an expanding X, then respawn.
+**Ships.** Vertex outlines, `sin_cos.v`, Q8.8 positions. Enterprise **green**, AI **bright yellow**, shots white. Mag: **5 shots / ~500 ms**, then **500 ms** reload; one shot per tap.
 
-**Stars.** 28 constellation points are composited at scanout **in front of the ships**.
+**AI.** Hidden elapsed time ramps thrust and aim; hunts by closing range and turning smoothly; by **2:30** it fires when locked on.
 
-Per-frame flow (simplified): physics → bounce / sun / shots → erase old vectors → transform and stroke ships → draw shot streaks → boom if needed.
+**Stars.** 28-point ROM at scanout, in front of ships.
+
+Per-frame flow (simplified): physics → bounce / sun / shots → erase old vectors → stroke ships → shot streaks → boom.
 
 ## Source (what Gowin builds)
 
@@ -72,8 +74,11 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 | `src/top.v` | Glue: PLL, LCD, game, buttons |
 | `src/gowin_rpll.v` | 27 → 33 MHz rPLL |
 | `src/lcd_timing.v` | 800×480 timing, border, `frame_start` |
-| `src/space_wars.v` | Game: physics, AI, vectors, shots, scores |
-| `src/fb_ram.v` | 1-bit 800×480 BRAM |
+| `src/space_wars.v` | Game glue: FB, sin_cos, handshakes |
+| `src/sw_physics.v` | Physics, AI, shot bank, scores, sun/BH |
+| `src/sw_draw.v` | Erase / stroke ships / shots / boom |
+| `src/sw_scanout.v` | HUD, stars, sun, FB color → RGB |
+| `src/fb_ram.v` | 2-bit 800×470 BRAM |
 | `src/sin_cos.v` | Quarter-wave sine/cosine |
 | `src/tang20k_lcd.cst` | Pin constraints |
 | `src/tang20k_lcd.sdc` | 27 MHz clock constraint |
@@ -84,7 +89,7 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 2. Synthesize / place & route for **GW2A-LV18PG256C8/I7**.
 3. Program the Dock. DIP 1 down, LCD seated.
 
-If you keep a separate Gowin tree, copy `fpga/tang20k_lcd/src/` into that project and rebuild.
+If you keep a separate Gowin tree, copy **all** of `fpga/tang20k_lcd/src/*.v` into that project, add `sw_physics.v` / `sw_draw.v` / `sw_scanout.v` to FileList, and rebuild. Do **not** add a `.vh` (or `SW_common.vh.v`) as a design file — Gowin will treat it as root-scope Verilog and fail.
 
 ## License
 
