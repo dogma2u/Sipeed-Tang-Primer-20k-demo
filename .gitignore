@@ -1,0 +1,11 @@
+.pio
+.vscode
+.cursor
+*.bin
+secrets.h
+config_local.h
+docs/
+fpga/**/impl/
+OSC/
+Frequency_Pro_PWM/
+Vfo_project_47l16_rework/
