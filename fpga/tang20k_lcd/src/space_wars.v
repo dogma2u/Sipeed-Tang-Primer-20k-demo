@@ -120,16 +120,21 @@ reg [8:0]         bul_oy, bul_oy2;
 reg [4:0]         fire_cd;
 reg [5:0]         bul_life;
 // AI torpedo (separate streak)
-reg               ebul_on;
-reg               ebul_have_prev;
-reg signed [23:0] ebul_x, ebul_y;
-reg signed [15:0] ebul_vx, ebul_vy;
-reg [9:0]         ebul_ox, ebul_ox2;
-reg [8:0]         ebul_oy, ebul_oy2;
-reg [5:0]         ebul_life;
+reg               ebul_on [0:2];
+reg               ebul_have_prev [0:2];
+reg signed [23:0] ebul_x [0:2];
+reg signed [23:0] ebul_y [0:2];
+reg signed [15:0] ebul_vx [0:2];
+reg signed [15:0] ebul_vy [0:2];
+reg [9:0]         ebul_ox [0:2];
+reg [9:0]         ebul_ox2 [0:2];
+reg [8:0]         ebul_oy [0:2];
+reg [8:0]         ebul_oy2 [0:2];
+reg [5:0]         ebul_life [0:2];
 reg [5:0]         ai_cd;
 reg [7:0]         lfsr;
 reg [4:0]         ai_pulse;
+reg [8:0]         play_sec; // elapsed play, cap 300s
 reg [4:0]         boom0, boom1;
 reg signed [15:0] boom0_x, boom0_y, boom_x, boom_y;
 reg [4:0]         boom0_len_prev, boom_len_prev;
@@ -612,6 +617,15 @@ function [8:0] star_y;
     end
 endfunction
 
+function star_at;
+    input [9:0] px;
+    input [9:0] py;
+    input [4:0] i;
+    begin
+        star_at = (px == star_x(i)) && (py == {1'b0, star_y(i)});
+    end
+endfunction
+
 task start_line;
     input signed [15:0] x0, y0, x1i, y1i;
     begin
@@ -716,6 +730,31 @@ wire signed [15:0] sdx_d = $signed({6'b0, pix_x_d}) - 16'sd400;
 wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
 wire in_sun = in_fb_d && !black_hole && (srr_d <= (SUN_R * SUN_R));
+wire in_bh  = in_fb_d && black_hole && (srr_d <= (SUN_R * SUN_R));
+wire [8:0] play_cap = (play_sec > 9'd300) ? 9'd300 : play_sec;
+wire [4:0] ai_dec   = play_cap / 9'd10; // 0..30 every 10s
+wire signed [15:0] ai_thrust = 16'sd20 + {7'b0, (play_cap / 9'd15)};
+wire star_hit =
+    star_at(pix_x_d, pix_y_d, 5'd0)  || star_at(pix_x_d, pix_y_d, 5'd1)  ||
+    star_at(pix_x_d, pix_y_d, 5'd2)  || star_at(pix_x_d, pix_y_d, 5'd3)  ||
+    star_at(pix_x_d, pix_y_d, 5'd4)  || star_at(pix_x_d, pix_y_d, 5'd5)  ||
+    star_at(pix_x_d, pix_y_d, 5'd6)  || star_at(pix_x_d, pix_y_d, 5'd7)  ||
+    star_at(pix_x_d, pix_y_d, 5'd8)  || star_at(pix_x_d, pix_y_d, 5'd9)  ||
+    star_at(pix_x_d, pix_y_d, 5'd10) || star_at(pix_x_d, pix_y_d, 5'd11) ||
+    star_at(pix_x_d, pix_y_d, 5'd12) || star_at(pix_x_d, pix_y_d, 5'd13) ||
+    star_at(pix_x_d, pix_y_d, 5'd14) || star_at(pix_x_d, pix_y_d, 5'd15) ||
+    star_at(pix_x_d, pix_y_d, 5'd16) || star_at(pix_x_d, pix_y_d, 5'd17) ||
+    star_at(pix_x_d, pix_y_d, 5'd18) || star_at(pix_x_d, pix_y_d, 5'd19) ||
+    star_at(pix_x_d, pix_y_d, 5'd20) || star_at(pix_x_d, pix_y_d, 5'd21) ||
+    star_at(pix_x_d, pix_y_d, 5'd22) || star_at(pix_x_d, pix_y_d, 5'd23) ||
+    star_at(pix_x_d, pix_y_d, 5'd24) || star_at(pix_x_d, pix_y_d, 5'd25) ||
+    star_at(pix_x_d, pix_y_d, 5'd26) || star_at(pix_x_d, pix_y_d, 5'd27);
+wire signed [15:0] ink_dx0 = abs16($signed({6'b0, pix_x_d}) - $signed(pos0_x[23:8]));
+wire signed [15:0] ink_dy0 = abs16($signed({6'b0, pix_y_d}) - $signed(pos0_y[23:8]));
+wire signed [15:0] ink_dx1 = abs16($signed({6'b0, pix_x_d}) - $signed(pos1_x[23:8]));
+wire signed [15:0] ink_dy1 = abs16($signed({6'b0, pix_y_d}) - $signed(pos1_y[23:8]));
+wire near_pl = (ink_dx0 < 16'sd30) && (ink_dy0 < 16'sd24);
+wire near_ai = (ink_dx1 < 16'sd22) && (ink_dy1 < 16'sd20);
 
 wire [7:0] score0_abs = score0[7] ? (~score0 + 8'd1) : score0;
 wire [7:0] score1_abs = score1[7] ? (~score1 + 8'd1) : score1;
@@ -778,22 +817,6 @@ wire [4:0]         boom_cnt  = boom_sel ? boom1 : boom0;
 always @(posedge clk) begin
     if (in_fb_d && go_hit) begin
         pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00; // bright red
-    end else if (in_fb_d && timer_hit) begin
-        if (timer_sec < 10'd10) begin
-            pix_r <= 5'h19; pix_g <= 6'h00; pix_b <= 5'h00; // red, -20%
-        end else if (timer_sec < 10'd30) begin
-            pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h00; // yellow, -20%
-        end else begin
-            pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h19; // white, -20%
-        end
-    end else if (in_fb_d && fuel_hit) begin
-        if (fuel_ms <= FUEL_RED_MS[14:0]) begin
-            pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00; // ≤5%
-        end else if (fuel_ms <= FUEL_YEL_MS[14:0]) begin
-            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h00; // ≤10%
-        end else begin
-            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // green
-        end
     end else if (in_sun) begin
         if (srr_d < 32'sd80) begin
             pix_r <= 5'h1F; pix_g <= 6'h30; pix_b <= 5'h04;
@@ -802,10 +825,37 @@ always @(posedge clk) begin
         end else begin
             pix_r <= 5'h18; pix_g <= 6'h14; pix_b <= 5'h00;
         end
+    end else if (in_bh) begin
+        pix_r <= 5'h02; pix_g <= 6'h00; pix_b <= 5'h02;
+    end else if (in_fb_d && star_hit) begin
+        pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
+    end else if (in_fb_d && rdata) begin
+        if (near_pl) begin
+            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // Enterprise green
+        end else if (near_ai) begin
+            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // AI max white
+        end else begin
+            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // shots
+        end
+    end else if (in_fb_d && timer_hit) begin
+        if (timer_sec < 10'd10) begin
+            pix_r <= 5'h19; pix_g <= 6'h00; pix_b <= 5'h00;
+        end else if (timer_sec < 10'd30) begin
+            pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h00;
+        end else begin
+            pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h19;
+        end
+    end else if (in_fb_d && fuel_hit) begin
+        if (fuel_ms <= FUEL_RED_MS[14:0]) begin
+            pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00;
+        end else if (fuel_ms <= FUEL_YEL_MS[14:0]) begin
+            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h00;
+        end else begin
+            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00;
+        end
     end else if (in_fb_d && score_hit) begin
-        // light blue @ full brightness
         pix_r <= 5'h0C; pix_g <= 6'h3C; pix_b <= 5'h1F;
-    end else if (in_fb_d && (rdata || lives0_hit)) begin
+    end else if (in_fb_d && lives0_hit) begin
         pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else begin
         pix_r <= 5'd0; pix_g <= 6'd0; pix_b <= 5'd0;
@@ -832,15 +882,22 @@ always @(posedge clk or negedge rst_n) begin
         boom_dirty     <= 1'b0;
         bullet_on      <= 1'b0;
         bul_have_prev  <= 1'b0;
-        ebul_on        <= 1'b0;
-        ebul_have_prev <= 1'b0;
+        ebul_on[0]        <= 1'b0;
+        ebul_on[1]        <= 1'b0;
+        ebul_on[2]        <= 1'b0;
+        ebul_have_prev[0] <= 1'b0;
+        ebul_have_prev[1] <= 1'b0;
+        ebul_have_prev[2] <= 1'b0;
         fire_hold      <= 1'b0;
         fire_cd        <= 5'd0;
         ai_cd          <= 6'd20;
         lfsr           <= 8'hA5;
         ai_pulse       <= 5'd0;
+        play_sec       <= 9'd0;
         bul_life       <= 6'd0;
-        ebul_life      <= 6'd0;
+        ebul_life[0]   <= 6'd0;
+        ebul_life[1]   <= 6'd0;
+        ebul_life[2]   <= 6'd0;
         boom0          <= 5'd0;
         boom1          <= 5'd0;
         boom0_len_prev <= 5'd0;
@@ -876,6 +933,8 @@ always @(posedge clk or negedge rst_n) begin
                             game_over <= 1'b1;
                         else
                             timer_sec <= timer_sec - 10'd1;
+                        if (play_sec < 9'd300)
+                            play_sec <= play_sec + 9'd1;
                     end
                 end else
                     frame_cnt <= frame_cnt + 6'd1;
@@ -890,7 +949,9 @@ always @(posedge clk or negedge rst_n) begin
                     thrusting1  <= 1'b0;
                     fire_hold   <= 1'b0;
                     bullet_on   <= 1'b0;
-                    ebul_on     <= 1'b0;
+                    ebul_on[0]  <= 1'b0;
+                    ebul_on[1]  <= 1'b0;
+                    ebul_on[2]  <= 1'b0;
                     if (boom0 == 5'd1) begin
                         pos0_x <= -(24'sd80 <<< 8);
                         pos0_y <= -(24'sd80 <<< 8);
@@ -953,18 +1014,20 @@ always @(posedge clk or negedge rst_n) begin
                             adx = dx[15] ? -dx : dx;
                             ady = dy[15] ? -dy : dy;
                             // Sluggish track: skip some frames, slow turn, always yaw if target is behind
-                            if (lfsr[1:0] != 2'b00) begin
+                            // Track harder as time goes on (skip less, turn faster)
+                            if ((ai_dec >= 5'd15) || (lfsr[1:0] != 2'b00)) begin
                                 if (dotp[31])
-                                    ang1 <= ang1 + 8'd2;
+                                    ang1 <= ang1 + (8'd2 + {3'b0, ai_dec[4:2]});
                                 else if (cross[31])
-                                    ang1 <= ang1 + 8'd2;
+                                    ang1 <= ang1 + (8'd2 + {3'b0, ai_dec[4:2]});
                                 else
-                                    ang1 <= ang1 - 8'd2;
+                                    ang1 <= ang1 - (8'd2 + {3'b0, ai_dec[4:2]});
                             end
-                            // Coast when close; pulse thrust so it overshoots
-                            thrusting1 <= ~dotp[31] && (dotp > 32'sd1500) &&
-                                          ((adx + ady) > 16'sd70) &&
-                                          (ai_pulse[4:3] != 2'b11);
+                            thrusting1 <= ~dotp[31] &&
+                                          ((ai_dec >= 5'd18) ||
+                                           ((dotp > 32'sd1500) &&
+                                            ((adx + ady) > 16'sd70) &&
+                                            (ai_pulse[4:3] != 2'b11)));
                         end else
                             thrusting1 <= 1'b0;
                         phys_phase <= 3'd4;
@@ -1031,33 +1094,67 @@ always @(posedge clk or negedge rst_n) begin
                                 gx = 16'sd0;
                                 gy = 16'sd0;
                             end
-                            vel1_x <= vel1_x + mul_q88(cos_a, thrusting1 ? 16'sd32 : 16'sd0)
+                            vel1_x <= vel1_x + mul_q88(cos_a, thrusting1 ? ai_thrust : 16'sd0)
                                       + gx - (vel1_x >>> 8);
-                            vel1_y <= vel1_y + mul_q88(sin_a, thrusting1 ? 16'sd32 : 16'sd0)
+                            vel1_y <= vel1_y + mul_q88(sin_a, thrusting1 ? ai_thrust : 16'sd0)
                                       + gy - (vel1_y >>> 8);
                         end
-                        // Wide cone + side miss; long irregular cooldown
+                        // Left / center / right shots; later all three
                         if (ai_cd != 6'd0)
                             ai_cd <= ai_cd - 6'd1;
-                        else if (!ebul_on && (boom0 == 5'd0) && (boom1 == 5'd0) &&
-                                 ~dotp[31] && (dotp > 32'sd4000)) begin
+                        else if ((boom0 == 5'd0) && (boom1 == 5'd0) &&
+                                 ((ai_dec >= 5'd20) || (~dotp[31] && (dotp > 32'sd2500)))) begin
                             begin : spawn_eshot
-                                reg signed [15:0] ox, oy, miss;
+                                reg signed [15:0] ox, oy, spr;
+                                reg [2:0] mask;
                                 ox = mul_q88(cos_a, 16'sd16);
                                 oy = mul_q88(sin_a, 16'sd16);
-                                miss = $signed({12'b0, lfsr[3:0]}) - 16'sd8; // -8..7
-                                ebul_x  <= pos1_x + {{8{ox[15]}}, ox};
-                                ebul_y  <= pos1_y + {{8{oy[15]}}, oy};
-                                ebul_vx <= mul_q88(cos_a, 16'sd10 <<< 8)
-                                         + mul_q88(-sin_a, miss <<< 7)
-                                         + (vel1_x >>> 1);
-                                ebul_vy <= mul_q88(sin_a, 16'sd10 <<< 8)
-                                         + mul_q88( cos_a, miss <<< 7)
-                                         + (vel1_y >>> 1);
+                                spr = 16'sd6 <<< 8;
+                                if (ai_dec >= 5'd24)
+                                    mask = 3'b111;
+                                else if (ai_dec >= 5'd12)
+                                    mask = 3'b010 | {lfsr[1], 1'b0, lfsr[0]};
+                                else begin
+                                    case (lfsr[1:0])
+                                        2'b00: mask = 3'b001;
+                                        2'b01: mask = 3'b010;
+                                        2'b10: mask = 3'b100;
+                                        default: mask = 3'b010;
+                                    endcase
+                                end
+                                if (mask[0] && !ebul_on[0]) begin
+                                    ebul_x[0]  <= pos1_x + {{8{ox[15]}}, ox};
+                                    ebul_y[0]  <= pos1_y + {{8{oy[15]}}, oy};
+                                    ebul_vx[0] <= mul_q88(cos_a, 16'sd10 <<< 8)
+                                                + mul_q88(-sin_a, spr) + (vel1_x >>> 1);
+                                    ebul_vy[0] <= mul_q88(sin_a, 16'sd10 <<< 8)
+                                                + mul_q88( cos_a, spr) + (vel1_y >>> 1);
+                                    ebul_on[0]   <= 1'b1;
+                                    ebul_life[0] <= BUL_LIFE[5:0];
+                                end
+                                if (mask[1] && !ebul_on[1]) begin
+                                    ebul_x[1]  <= pos1_x + {{8{ox[15]}}, ox};
+                                    ebul_y[1]  <= pos1_y + {{8{oy[15]}}, oy};
+                                    ebul_vx[1] <= mul_q88(cos_a, 16'sd10 <<< 8) + (vel1_x >>> 1);
+                                    ebul_vy[1] <= mul_q88(sin_a, 16'sd10 <<< 8) + (vel1_y >>> 1);
+                                    ebul_on[1]   <= 1'b1;
+                                    ebul_life[1] <= BUL_LIFE[5:0];
+                                end
+                                if (mask[2] && !ebul_on[2]) begin
+                                    ebul_x[2]  <= pos1_x + {{8{ox[15]}}, ox};
+                                    ebul_y[2]  <= pos1_y + {{8{oy[15]}}, oy};
+                                    ebul_vx[2] <= mul_q88(cos_a, 16'sd10 <<< 8)
+                                                + mul_q88(-sin_a, -spr) + (vel1_x >>> 1);
+                                    ebul_vy[2] <= mul_q88(sin_a, 16'sd10 <<< 8)
+                                                + mul_q88( cos_a, -spr) + (vel1_y >>> 1);
+                                    ebul_on[2]   <= 1'b1;
+                                    ebul_life[2] <= BUL_LIFE[5:0];
+                                end
                             end
-                            ebul_on   <= 1'b1;
-                            ebul_life <= BUL_LIFE[5:0];
-                            ai_cd     <= 6'd42 + {2'b0, lfsr[3:0]};
+                            if ((6'd42 - {1'b0, ai_dec}) < 6'd8)
+                                ai_cd <= 6'd8;
+                            else
+                                ai_cd <= 6'd42 - {1'b0, ai_dec};
                         end
                         phys_phase <= 3'd7;
                     end
@@ -1125,11 +1222,20 @@ always @(posedge clk or negedge rst_n) begin
                         if (bul_life != 6'd0)
                             bul_life <= bul_life - 6'd1;
                     end
-                    if (ebul_on) begin
-                        ebul_x <= ebul_x + {{8{ebul_vx[15]}}, ebul_vx};
-                        ebul_y <= ebul_y + {{8{ebul_vy[15]}}, ebul_vy};
-                        if (ebul_life != 6'd0)
-                            ebul_life <= ebul_life - 6'd1;
+                    if (ebul_on[0]) begin
+                        ebul_x[0] <= ebul_x[0] + {{8{ebul_vx[0][15]}}, ebul_vx[0]};
+                        ebul_y[0] <= ebul_y[0] + {{8{ebul_vy[0][15]}}, ebul_vy[0]};
+                        if (ebul_life[0] != 6'd0) ebul_life[0] <= ebul_life[0] - 6'd1;
+                    end
+                    if (ebul_on[1]) begin
+                        ebul_x[1] <= ebul_x[1] + {{8{ebul_vx[1][15]}}, ebul_vx[1]};
+                        ebul_y[1] <= ebul_y[1] + {{8{ebul_vy[1][15]}}, ebul_vy[1]};
+                        if (ebul_life[1] != 6'd0) ebul_life[1] <= ebul_life[1] - 6'd1;
+                    end
+                    if (ebul_on[2]) begin
+                        ebul_x[2] <= ebul_x[2] + {{8{ebul_vx[2][15]}}, ebul_vx[2]};
+                        ebul_y[2] <= ebul_y[2] + {{8{ebul_vy[2][15]}}, ebul_vy[2]};
+                        if (ebul_life[2] != 6'd0) ebul_life[2] <= ebul_life[2] - 6'd1;
                     end
                     if (boom0 == 5'd1) begin
                         if (lives0 != 3'd0)
@@ -1194,30 +1300,88 @@ always @(posedge clk or negedge rst_n) begin
                             end
                         end
                     end
-                    if (ebul_on) begin
-                        if ((ebul_life == 6'd0) ||
-                            (ebul_x < (MARGIN <<< 8)) ||
-                            (ebul_x > ((FB_W - MARGIN) <<< 8)) ||
-                            (ebul_y < (MARGIN <<< 8)) ||
-                            (ebul_y > ((FB_H - MARGIN) <<< 8)))
-                            ebul_on <= 1'b0;
+                    if (ebul_on[0]) begin
+                        if ((ebul_life[0] == 6'd0) ||
+                            (ebul_x[0] < (MARGIN <<< 8)) ||
+                            (ebul_x[0] > ((FB_W - MARGIN) <<< 8)) ||
+                            (ebul_y[0] < (MARGIN <<< 8)) ||
+                            (ebul_y[0] > ((FB_H - MARGIN) <<< 8)))
+                            ebul_on[0] <= 1'b0;
                         else begin
-                            bdx = $signed(ebul_x[23:8]) - $signed(pos0_x[23:8]);
-                            bdy = $signed(ebul_y[23:8]) - $signed(pos0_y[23:8]);
+                            bdx = $signed(ebul_x[0][23:8]) - $signed(pos0_x[23:8]);
+                            bdy = $signed(ebul_y[0][23:8]) - $signed(pos0_y[23:8]);
                             adx = bdx[15] ? -bdx : bdx;
                             ady = bdy[15] ? -bdy : bdy;
                             if ((boom0 == 5'd0) && (adx < 16'sd20) && (ady < 16'sd20)) begin
-                                ebul_on     <= 1'b0;
+                                ebul_on[0]  <= 1'b0;
                                 boom0       <= BOOM_N[4:0];
                                 boom0_dirty <= 1'b1;
                                 boom0_x     <= $signed(pos0_x[23:8]);
                                 boom0_y     <= $signed(pos0_y[23:8]);
                                 hit_pl      = 1'b1;
                             end else begin
-                                bdx = $signed(ebul_x[23:8]) - 16'sd400;
-                                bdy = $signed(ebul_y[23:8]) - 16'sd240;
+                                bdx = $signed(ebul_x[0][23:8]) - 16'sd400;
+                                bdy = $signed(ebul_y[0][23:8]) - 16'sd240;
                                 if ((bdx * bdx + bdy * bdy) < 32'sd400) begin
-                                    ebul_on <= 1'b0;
+                                    ebul_on[0] <= 1'b0;
+                                    sun_e = 1'b1;
+                                end
+                            end
+                        end
+                    end
+                    if (ebul_on[1]) begin
+                        if ((ebul_life[1] == 6'd0) ||
+                            (ebul_x[1] < (MARGIN <<< 8)) ||
+                            (ebul_x[1] > ((FB_W - MARGIN) <<< 8)) ||
+                            (ebul_y[1] < (MARGIN <<< 8)) ||
+                            (ebul_y[1] > ((FB_H - MARGIN) <<< 8)))
+                            ebul_on[1] <= 1'b0;
+                        else begin
+                            bdx = $signed(ebul_x[1][23:8]) - $signed(pos0_x[23:8]);
+                            bdy = $signed(ebul_y[1][23:8]) - $signed(pos0_y[23:8]);
+                            adx = bdx[15] ? -bdx : bdx;
+                            ady = bdy[15] ? -bdy : bdy;
+                            if ((boom0 == 5'd0) && !hit_pl && (adx < 16'sd20) && (ady < 16'sd20)) begin
+                                ebul_on[1]  <= 1'b0;
+                                boom0       <= BOOM_N[4:0];
+                                boom0_dirty <= 1'b1;
+                                boom0_x     <= $signed(pos0_x[23:8]);
+                                boom0_y     <= $signed(pos0_y[23:8]);
+                                hit_pl      = 1'b1;
+                            end else begin
+                                bdx = $signed(ebul_x[1][23:8]) - 16'sd400;
+                                bdy = $signed(ebul_y[1][23:8]) - 16'sd240;
+                                if ((bdx * bdx + bdy * bdy) < 32'sd400) begin
+                                    ebul_on[1] <= 1'b0;
+                                    sun_e = 1'b1;
+                                end
+                            end
+                        end
+                    end
+                    if (ebul_on[2]) begin
+                        if ((ebul_life[2] == 6'd0) ||
+                            (ebul_x[2] < (MARGIN <<< 8)) ||
+                            (ebul_x[2] > ((FB_W - MARGIN) <<< 8)) ||
+                            (ebul_y[2] < (MARGIN <<< 8)) ||
+                            (ebul_y[2] > ((FB_H - MARGIN) <<< 8)))
+                            ebul_on[2] <= 1'b0;
+                        else begin
+                            bdx = $signed(ebul_x[2][23:8]) - $signed(pos0_x[23:8]);
+                            bdy = $signed(ebul_y[2][23:8]) - $signed(pos0_y[23:8]);
+                            adx = bdx[15] ? -bdx : bdx;
+                            ady = bdy[15] ? -bdy : bdy;
+                            if ((boom0 == 5'd0) && !hit_pl && (adx < 16'sd20) && (ady < 16'sd20)) begin
+                                ebul_on[2]  <= 1'b0;
+                                boom0       <= BOOM_N[4:0];
+                                boom0_dirty <= 1'b1;
+                                boom0_x     <= $signed(pos0_x[23:8]);
+                                boom0_y     <= $signed(pos0_y[23:8]);
+                                hit_pl      = 1'b1;
+                            end else begin
+                                bdx = $signed(ebul_x[2][23:8]) - 16'sd400;
+                                bdy = $signed(ebul_y[2][23:8]) - 16'sd240;
+                                if ((bdx * bdx + bdy * bdy) < 32'sd400) begin
+                                    ebul_on[2] <= 1'b0;
                                     sun_e = 1'b1;
                                 end
                             end
@@ -1367,7 +1531,8 @@ always @(posedge clk or negedge rst_n) begin
             end
 
             ST_STARS: begin
-                plot_en <= 1'b1; plot_bit <= 1'b1;
+                // Erase leftover FB stars; stars are composited at scanout (in front of ships)
+                plot_en <= 1'b1; plot_bit <= 1'b0;
                 plot_x <= star_x(si); plot_y <= star_y(si);
                 if (si == NSTARS - 1) begin
                     vi <= 5'd0;
@@ -1549,38 +1714,98 @@ always @(posedge clk or negedge rst_n) begin
                             ei <= 4'd2;
                         end
                     end else if (ei == 4'd2) begin
-                        if (ebul_have_prev) begin
-                            start_line($signed({6'b0, ebul_ox}), $signed({7'b0, ebul_oy}),
-                                       $signed({6'b0, ebul_ox2}), $signed({7'b0, ebul_oy2}));
+                        if (ebul_have_prev[0]) begin
+                            start_line($signed({6'b0, ebul_ox[0]}), $signed({7'b0, ebul_oy[0]}),
+                                       $signed({6'b0, ebul_ox2[0]}), $signed({7'b0, ebul_oy2[0]}));
                             line_active <= 1'b1;
                             plot_bit    <= 1'b0;
                             ei <= 4'd3;
                         end else
                             ei <= 4'd3;
                     end else if (ei == 4'd3) begin
-                        if (ebul_on) begin
-                            begin : edir
+                        if (ebul_on[0]) begin
+                            begin : edir0
                                 reg signed [15:0] sx, sy, x0, y0, x1, y1;
-                                x0 = $signed(ebul_x[23:8]);
-                                y0 = $signed(ebul_y[23:8]);
-                                sx = ebul_vx >>> 9;
-                                sy = ebul_vy >>> 9;
+                                x0 = $signed(ebul_x[0][23:8]);
+                                y0 = $signed(ebul_y[0][23:8]);
+                                sx = ebul_vx[0] >>> 9;
+                                sy = ebul_vy[0] >>> 9;
                                 if (sx == 0 && sy == 0) sx = 16'sd5;
-                                x1 = x0 + sx;
-                                y1 = y0 + sy;
+                                x1 = x0 + sx; y1 = y0 + sy;
                                 start_line(x0, y0, x1, y1);
-                                ebul_ox  <= x0[9:0];
-                                ebul_oy  <= y0[8:0];
-                                ebul_ox2 <= x1[9:0];
-                                ebul_oy2 <= y1[8:0];
+                                ebul_ox[0]  <= x0[9:0];
+                                ebul_oy[0]  <= y0[8:0];
+                                ebul_ox2[0] <= x1[9:0];
+                                ebul_oy2[0] <= y1[8:0];
                             end
-                            line_active    <= 1'b1;
-                            plot_bit       <= 1'b1;
-                            ebul_have_prev <= 1'b1;
+                            line_active <= 1'b1; plot_bit <= 1'b1;
+                            ebul_have_prev[0] <= 1'b1;
                             ei <= 4'd4;
                         end else begin
-                            ebul_have_prev <= 1'b0;
+                            ebul_have_prev[0] <= 1'b0;
                             ei <= 4'd4;
+                        end
+                    end else if (ei == 4'd4) begin
+                        if (ebul_have_prev[1]) begin
+                            start_line($signed({6'b0, ebul_ox[1]}), $signed({7'b0, ebul_oy[1]}),
+                                       $signed({6'b0, ebul_ox2[1]}), $signed({7'b0, ebul_oy2[1]}));
+                            line_active <= 1'b1; plot_bit <= 1'b0;
+                            ei <= 4'd5;
+                        end else
+                            ei <= 4'd5;
+                    end else if (ei == 4'd5) begin
+                        if (ebul_on[1]) begin
+                            begin : edir1
+                                reg signed [15:0] sx, sy, x0, y0, x1, y1;
+                                x0 = $signed(ebul_x[1][23:8]);
+                                y0 = $signed(ebul_y[1][23:8]);
+                                sx = ebul_vx[1] >>> 9;
+                                sy = ebul_vy[1] >>> 9;
+                                if (sx == 0 && sy == 0) sx = 16'sd5;
+                                x1 = x0 + sx; y1 = y0 + sy;
+                                start_line(x0, y0, x1, y1);
+                                ebul_ox[1]  <= x0[9:0];
+                                ebul_oy[1]  <= y0[8:0];
+                                ebul_ox2[1] <= x1[9:0];
+                                ebul_oy2[1] <= y1[8:0];
+                            end
+                            line_active <= 1'b1; plot_bit <= 1'b1;
+                            ebul_have_prev[1] <= 1'b1;
+                            ei <= 4'd6;
+                        end else begin
+                            ebul_have_prev[1] <= 1'b0;
+                            ei <= 4'd6;
+                        end
+                    end else if (ei == 4'd6) begin
+                        if (ebul_have_prev[2]) begin
+                            start_line($signed({6'b0, ebul_ox[2]}), $signed({7'b0, ebul_oy[2]}),
+                                       $signed({6'b0, ebul_ox2[2]}), $signed({7'b0, ebul_oy2[2]}));
+                            line_active <= 1'b1; plot_bit <= 1'b0;
+                            ei <= 4'd7;
+                        end else
+                            ei <= 4'd7;
+                    end else if (ei == 4'd7) begin
+                        if (ebul_on[2]) begin
+                            begin : edir2
+                                reg signed [15:0] sx, sy, x0, y0, x1, y1;
+                                x0 = $signed(ebul_x[2][23:8]);
+                                y0 = $signed(ebul_y[2][23:8]);
+                                sx = ebul_vx[2] >>> 9;
+                                sy = ebul_vy[2] >>> 9;
+                                if (sx == 0 && sy == 0) sx = 16'sd5;
+                                x1 = x0 + sx; y1 = y0 + sy;
+                                start_line(x0, y0, x1, y1);
+                                ebul_ox[2]  <= x0[9:0];
+                                ebul_oy[2]  <= y0[8:0];
+                                ebul_ox2[2] <= x1[9:0];
+                                ebul_oy2[2] <= y1[8:0];
+                            end
+                            line_active <= 1'b1; plot_bit <= 1'b1;
+                            ebul_have_prev[2] <= 1'b1;
+                            ei <= 4'd8;
+                        end else begin
+                            ebul_have_prev[2] <= 1'b0;
+                            ei <= 4'd8;
                         end
                     end else begin
                         ei <= 5'd0;
