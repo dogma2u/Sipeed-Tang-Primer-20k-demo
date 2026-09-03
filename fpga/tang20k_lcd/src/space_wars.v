@@ -1,6 +1,7 @@
 // S1 left | S2 right | S3 thrust | S4 fire | S0 reset
-// Enterprise = you; wedge = AI (sloppy chase + inaccurate shots). Bounce walls.
-// Shoot the sun 10× → black hole (gravity on, border red).
+// Enterprise (green) = you; wedge (white) = AI. Bounce walls.
+// Elapsed play_sec (hidden) ramps AI; at 2:30 the AI is wildly mean.
+// Shoot the sun 10× → black hole (1/r^2 gravity, border red).
 
 module space_wars (
     input  wire       clk,
@@ -20,7 +21,7 @@ module space_wars (
 );
 
 localparam integer FB_W   = 800;
-localparam integer FB_H   = 480;
+localparam integer FB_H   = 470; // 480x2-bit needs 48 BSRAM; chip has 46
 localparam integer FB_SZ  = FB_W * FB_H;
 localparam integer SUN_X  = 400;
 localparam integer SUN_Y  = 240;
@@ -67,6 +68,11 @@ localparam integer FUEL_T         = 2;
 localparam integer FUEL_INNER_H   = 52;   // FUEL_H - 2*FUEL_T
 localparam integer FUEL_MS_PER_PX = 288;  // ~15000/52
 localparam integer BH_HITS_SUN    = 5;    // player shots into BH → sun returns
+localparam integer PLAY_MEAN_SEC  = 150; // 2:30 elapsed → wildly mean AI
+localparam [1:0] COL_OFF  = 2'b00;
+localparam [1:0] COL_PL   = 2'b01;
+localparam [1:0] COL_AI   = 2'b10;
+localparam [1:0] COL_SHOT = 2'b11;
 localparam integer GO_X           = 241;
 localparam integer GO_Y           = 219;  // 7*6=42 tall; center at screen mid (240)
 localparam integer GO_SCALE       = 6;
@@ -134,7 +140,7 @@ reg [5:0]         ebul_life [0:2];
 reg [5:0]         ai_cd;
 reg [7:0]         lfsr;
 reg [4:0]         ai_pulse;
-reg [8:0]         play_sec; // elapsed play, cap 300s
+reg [8:0]         play_sec; // hidden elapsed run time (not the HUD countdown)
 reg [4:0]         boom0, boom1;
 reg signed [15:0] boom0_x, boom0_y, boom_x, boom_y;
 reg [4:0]         boom0_len_prev, boom_len_prev;
@@ -166,7 +172,7 @@ reg               line_active;
 reg               plot_en;
 reg [9:0]         plot_x;
 reg [8:0]         plot_y;
-reg               plot_bit;
+reg [1:0]         plot_col;
 
 wire [7:0] ang_now = ship_sel ? ang1 : ang0;
 wire signed [15:0] sin_a, cos_a;
@@ -186,9 +192,26 @@ function signed [15:0] mul_q88;
     end
 endfunction
 
-function signed [15:0] abs16;
-    input signed [15:0] v;
-    begin abs16 = v[15] ? -v : v; end
+function signed [15:0] grav_acc;
+    input signed [15:0] dcomp;
+    input signed [15:0] gdx;
+    input signed [15:0] gdy;
+    input               invert;
+    reg signed [31:0] r2v;
+    reg signed [31:0] num;
+    reg signed [31:0] q;
+    begin
+        r2v = (gdx * gdx) + (gdy * gdy);
+        if (r2v < 32'sd256)
+            r2v = 32'sd256;
+        num = dcomp * 32'sd768;
+        q   = num / r2v;
+        if (q > 32'sd48)
+            q = 32'sd48;
+        else if (q < -32'sd48)
+            q = -32'sd48;
+        grav_acc = invert ? -$signed(q[15:0]) : q[15:0];
+    end
 endfunction
 
 function [6:0] seg7;
@@ -617,12 +640,48 @@ function [8:0] star_y;
     end
 endfunction
 
-function star_at;
+function star_rom_hit;
     input [9:0] px;
     input [9:0] py;
-    input [4:0] i;
     begin
-        star_at = (px == star_x(i)) && (py == {1'b0, star_y(i)});
+        case ({py[8:0], px})
+            {9'd50,  10'd90}:  star_rom_hit = 1'b1;
+            {9'd60,  10'd130}: star_rom_hit = 1'b1;
+            {9'd55,  10'd170}: star_rom_hit = 1'b1;
+            {9'd70,  10'd210}: star_rom_hit = 1'b1;
+            {9'd100, 10'd230}: star_rom_hit = 1'b1;
+            {9'd110, 10'd270}: star_rom_hit = 1'b1;
+            {9'd95,  10'd300}: star_rom_hit = 1'b1;
+            {9'd40,  10'd520}: star_rom_hit = 1'b1;
+            {9'd70,  10'd560}: star_rom_hit = 1'b1;
+            {9'd45,  10'd600}: star_rom_hit = 1'b1;
+            {9'd75,  10'd640}: star_rom_hit = 1'b1;
+            {9'd50,  10'd680}: star_rom_hit = 1'b1;
+            {9'd360, 10'd100}: star_rom_hit = 1'b1;
+            {9'd350, 10'd180}: star_rom_hit = 1'b1;
+            {9'd390, 10'd130}: star_rom_hit = 1'b1;
+            {9'd395, 10'd150}: star_rom_hit = 1'b1;
+            {9'd400, 10'd170}: star_rom_hit = 1'b1;
+            {9'd440, 10'd110}: star_rom_hit = 1'b1;
+            {9'd445, 10'd190}: star_rom_hit = 1'b1;
+            {9'd400, 10'd650}: star_rom_hit = 1'b1;
+            {9'd420, 10'd680}: star_rom_hit = 1'b1;
+            {9'd400, 10'd710}: star_rom_hit = 1'b1;
+            {9'd440, 10'd690}: star_rom_hit = 1'b1;
+            {9'd380, 10'd720}: star_rom_hit = 1'b1;
+            {9'd160, 10'd720}: star_rom_hit = 1'b1;
+            {9'd130, 10'd700}: star_rom_hit = 1'b1;
+            {9'd130, 10'd740}: star_rom_hit = 1'b1;
+            {9'd100, 10'd760}: star_rom_hit = 1'b1;
+            default: star_rom_hit = 1'b0;
+        endcase
+    end
+endfunction
+
+function signed [15:0] abs16;
+    input signed [15:0] v;
+    begin
+        abs16 = v[15] ? -v : v;
     end
 endfunction
 
@@ -709,8 +768,8 @@ wire [18:0] waddr = (plot_y * 19'd800) + {9'd0, plot_x};
 wire        w_ok  = plot_en && (plot_x < FB_W) && (plot_y < FB_H);
 wire        wr_en = (state == ST_CLEAR) || w_ok;
 wire [18:0] wr_addr = (state == ST_CLEAR) ? clear_addr : waddr;
-wire        wr_data = (state == ST_CLEAR) ? 1'b0 : plot_bit;
-wire        rdata;
+wire [1:0]      wr_data = (state == ST_CLEAR) ? COL_OFF : plot_col;
+wire [1:0]      rdata;
 
 fb_ram u_fb (
     .clk(clk), .we(wr_en), .waddr(wr_addr), .wdata(wr_data),
@@ -731,30 +790,12 @@ wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
 wire in_sun = in_fb_d && !black_hole && (srr_d <= (SUN_R * SUN_R));
 wire in_bh  = in_fb_d && black_hole && (srr_d <= (SUN_R * SUN_R));
-wire [8:0] play_cap = (play_sec > 9'd300) ? 9'd300 : play_sec;
-wire [4:0] ai_dec   = play_cap / 9'd10; // 0..30 every 10s
-wire signed [15:0] ai_thrust = 16'sd20 + {7'b0, (play_cap / 9'd15)};
-wire star_hit =
-    star_at(pix_x_d, pix_y_d, 5'd0)  || star_at(pix_x_d, pix_y_d, 5'd1)  ||
-    star_at(pix_x_d, pix_y_d, 5'd2)  || star_at(pix_x_d, pix_y_d, 5'd3)  ||
-    star_at(pix_x_d, pix_y_d, 5'd4)  || star_at(pix_x_d, pix_y_d, 5'd5)  ||
-    star_at(pix_x_d, pix_y_d, 5'd6)  || star_at(pix_x_d, pix_y_d, 5'd7)  ||
-    star_at(pix_x_d, pix_y_d, 5'd8)  || star_at(pix_x_d, pix_y_d, 5'd9)  ||
-    star_at(pix_x_d, pix_y_d, 5'd10) || star_at(pix_x_d, pix_y_d, 5'd11) ||
-    star_at(pix_x_d, pix_y_d, 5'd12) || star_at(pix_x_d, pix_y_d, 5'd13) ||
-    star_at(pix_x_d, pix_y_d, 5'd14) || star_at(pix_x_d, pix_y_d, 5'd15) ||
-    star_at(pix_x_d, pix_y_d, 5'd16) || star_at(pix_x_d, pix_y_d, 5'd17) ||
-    star_at(pix_x_d, pix_y_d, 5'd18) || star_at(pix_x_d, pix_y_d, 5'd19) ||
-    star_at(pix_x_d, pix_y_d, 5'd20) || star_at(pix_x_d, pix_y_d, 5'd21) ||
-    star_at(pix_x_d, pix_y_d, 5'd22) || star_at(pix_x_d, pix_y_d, 5'd23) ||
-    star_at(pix_x_d, pix_y_d, 5'd24) || star_at(pix_x_d, pix_y_d, 5'd25) ||
-    star_at(pix_x_d, pix_y_d, 5'd26) || star_at(pix_x_d, pix_y_d, 5'd27);
-wire signed [15:0] ink_dx0 = abs16($signed({6'b0, pix_x_d}) - $signed(pos0_x[23:8]));
-wire signed [15:0] ink_dy0 = abs16($signed({6'b0, pix_y_d}) - $signed(pos0_y[23:8]));
-wire signed [15:0] ink_dx1 = abs16($signed({6'b0, pix_x_d}) - $signed(pos1_x[23:8]));
-wire signed [15:0] ink_dy1 = abs16($signed({6'b0, pix_y_d}) - $signed(pos1_y[23:8]));
-wire near_pl = (ink_dx0 < 16'sd30) && (ink_dy0 < 16'sd24);
-wire near_ai = (ink_dx1 < 16'sd22) && (ink_dy1 < 16'sd20);
+wire [8:0] play_cap = (play_sec > PLAY_MEAN_SEC[8:0]) ? PLAY_MEAN_SEC[8:0] : play_sec;
+wire       ai_wild  = (play_sec >= PLAY_MEAN_SEC[8:0]);
+wire [8:0] ai_quot  = play_cap / 9'd5; // 0..30 over 2:30 (every 5s)
+wire [4:0] ai_dec   = ai_quot[4:0];
+wire signed [15:0] ai_thrust = 16'sd20 + $signed({7'b0, play_cap} * 16'd20 / 16'd150);
+wire star_hit = star_rom_hit(pix_x_d, pix_y_d);
 
 wire [7:0] score0_abs = score0[7] ? (~score0 + 8'd1) : score0;
 wire [7:0] score1_abs = score1[7] ? (~score1 + 8'd1) : score1;
@@ -829,13 +870,11 @@ always @(posedge clk) begin
         pix_r <= 5'h02; pix_g <= 6'h00; pix_b <= 5'h02;
     end else if (in_fb_d && star_hit) begin
         pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
-    end else if (in_fb_d && rdata) begin
-        if (near_pl) begin
-            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // Enterprise green
-        end else if (near_ai) begin
-            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // AI max white
+    end else if (in_fb_d && (rdata != COL_OFF)) begin
+        if (rdata == COL_PL) begin
+            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // Enterprise
         end else begin
-            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // shots
+            pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // AI / shots
         end
     end else if (in_fb_d && timer_hit) begin
         if (timer_sec < 10'd10) begin
@@ -867,6 +906,7 @@ always @(posedge clk or negedge rst_n) begin
         state        <= ST_CLEAR;
         clear_addr   <= 19'd0;
         plot_en      <= 1'b0;
+        plot_col     <= COL_OFF;
         line_active  <= 1'b0;
         have_prev0   <= 1'b0;
         have_prev1   <= 1'b0;
@@ -933,7 +973,7 @@ always @(posedge clk or negedge rst_n) begin
                             game_over <= 1'b1;
                         else
                             timer_sec <= timer_sec - 10'd1;
-                        if (play_sec < 9'd300)
+                        if (play_sec < PLAY_MEAN_SEC[8:0])
                             play_sec <= play_sec + 9'd1;
                     end
                 end else
@@ -970,7 +1010,7 @@ always @(posedge clk or negedge rst_n) begin
                         boom1 <= boom1 - 5'd1;
                     ship_sel    <= 1'b0;
                     line_active <= 1'b0;
-                    plot_bit    <= 1'b0;
+                    plot_col    <= COL_OFF;
                     ei          <= 4'd0;
                     if (have_prev0 || have_prev1)
                         state <= ST_ERASE;
@@ -1015,16 +1055,16 @@ always @(posedge clk or negedge rst_n) begin
                             ady = dy[15] ? -dy : dy;
                             // Sluggish track: skip some frames, slow turn, always yaw if target is behind
                             // Track harder as time goes on (skip less, turn faster)
-                            if ((ai_dec >= 5'd15) || (lfsr[1:0] != 2'b00)) begin
+                            if (ai_wild || (ai_dec >= 5'd15) || (lfsr[1:0] != 2'b00)) begin
                                 if (dotp[31])
-                                    ang1 <= ang1 + (8'd2 + {3'b0, ai_dec[4:2]});
+                                    ang1 <= ang1 + (8'd2 + {3'b0, ai_dec[4:2]} + (ai_wild ? 8'd6 : 8'd0));
                                 else if (cross[31])
-                                    ang1 <= ang1 + (8'd2 + {3'b0, ai_dec[4:2]});
+                                    ang1 <= ang1 + (8'd2 + {3'b0, ai_dec[4:2]} + (ai_wild ? 8'd6 : 8'd0));
                                 else
-                                    ang1 <= ang1 - (8'd2 + {3'b0, ai_dec[4:2]});
+                                    ang1 <= ang1 - (8'd2 + {3'b0, ai_dec[4:2]} + (ai_wild ? 8'd6 : 8'd0));
                             end
                             thrusting1 <= ~dotp[31] &&
-                                          ((ai_dec >= 5'd18) ||
+                                          (ai_wild || (ai_dec >= 5'd18) ||
                                            ((dotp > 32'sd1500) &&
                                             ((adx + ady) > 16'sd70) &&
                                             (ai_pulse[4:3] != 2'b11)));
@@ -1041,13 +1081,9 @@ always @(posedge clk or negedge rst_n) begin
                             reg signed [15:0] gdx, gdy, gx, gy;
                             gdx = 16'sd400 - $signed(pos0_x[23:8]);
                             gdy = 16'sd240 - $signed(pos0_y[23:8]);
-                            // BH: soft pull; anti_grav: soft push; thrust (~40) can overcome
-                            if (black_hole) begin
-                                gx = gdx >>> 5;
-                                gy = gdy >>> 5;
-                            end else if (anti_grav) begin
-                                gx = -(gdx >>> 5);
-                                gy = -(gdy >>> 5);
+                            if (black_hole || anti_grav) begin
+                                gx = grav_acc(gdx, gdx, gdy, anti_grav);
+                                gy = grav_acc(gdy, gdx, gdy, anti_grav);
                             end else begin
                                 gx = 16'sd0;
                                 gy = 16'sd0;
@@ -1084,12 +1120,9 @@ always @(posedge clk or negedge rst_n) begin
                             reg signed [15:0] gdx, gdy, gx, gy;
                             gdx = 16'sd400 - $signed(pos1_x[23:8]);
                             gdy = 16'sd240 - $signed(pos1_y[23:8]);
-                            if (black_hole) begin
-                                gx = gdx >>> 5;
-                                gy = gdy >>> 5;
-                            end else if (anti_grav) begin
-                                gx = -(gdx >>> 5);
-                                gy = -(gdy >>> 5);
+                            if (black_hole || anti_grav) begin
+                                gx = grav_acc(gdx, gdx, gdy, anti_grav);
+                                gy = grav_acc(gdy, gdx, gdy, anti_grav);
                             end else begin
                                 gx = 16'sd0;
                                 gy = 16'sd0;
@@ -1103,16 +1136,17 @@ always @(posedge clk or negedge rst_n) begin
                         if (ai_cd != 6'd0)
                             ai_cd <= ai_cd - 6'd1;
                         else if ((boom0 == 5'd0) && (boom1 == 5'd0) &&
-                                 ((ai_dec >= 5'd20) || (~dotp[31] && (dotp > 32'sd2500)))) begin
+                                 (ai_wild || (ai_dec >= 5'd20) ||
+                                  (~dotp[31] && (dotp > 32'sd2500)))) begin
                             begin : spawn_eshot
                                 reg signed [15:0] ox, oy, spr;
                                 reg [2:0] mask;
                                 ox = mul_q88(cos_a, 16'sd16);
                                 oy = mul_q88(sin_a, 16'sd16);
                                 spr = 16'sd6 <<< 8;
-                                if (ai_dec >= 5'd24)
+                                if (ai_wild || (ai_dec >= 5'd12))
                                     mask = 3'b111;
-                                else if (ai_dec >= 5'd12)
+                                else if (ai_dec >= 5'd6)
                                     mask = 3'b010 | {lfsr[1], 1'b0, lfsr[0]};
                                 else begin
                                     case (lfsr[1:0])
@@ -1151,7 +1185,9 @@ always @(posedge clk or negedge rst_n) begin
                                     ebul_life[2] <= BUL_LIFE[5:0];
                                 end
                             end
-                            if ((6'd42 - {1'b0, ai_dec}) < 6'd8)
+                            if (ai_wild)
+                                ai_cd <= 6'd4;
+                            else if ((6'd42 - {1'b0, ai_dec}) < 6'd8)
                                 ai_cd <= 6'd8;
                             else
                                 ai_cd <= 6'd42 - {1'b0, ai_dec};
@@ -1460,7 +1496,7 @@ always @(posedge clk or negedge rst_n) begin
                         game_over <= 1'b1;
                     ship_sel    <= 1'b0;
                     line_active <= 1'b0;
-                    plot_bit    <= 1'b0;
+                    plot_col    <= COL_OFF;
                     ei          <= 4'd0;
                     if (have_prev0 || have_prev1)
                         state <= ST_ERASE;
@@ -1516,11 +1552,11 @@ always @(posedge clk or negedge rst_n) begin
                                        pxv1[edge_b(1'b1, ei - 5'd1)],
                                        pyv1[edge_b(1'b1, ei - 5'd1)]);
                         line_active <= 1'b1;
-                        plot_bit <= 1'b0;
+                        plot_col <= COL_OFF;
                         ei <= ei + 5'd1;
                     end
                 end else begin
-                    plot_bit <= 1'b0;
+                    plot_col <= COL_OFF;
                     if ((b_x >= 0) && (b_x < FB_W) && (b_y >= 0) && (b_y < FB_H)) begin
                         plot_en <= 1'b1;
                         plot_x <= b_x[9:0];
@@ -1532,7 +1568,7 @@ always @(posedge clk or negedge rst_n) begin
 
             ST_STARS: begin
                 // Erase leftover FB stars; stars are composited at scanout (in front of ships)
-                plot_en <= 1'b1; plot_bit <= 1'b0;
+                plot_en <= 1'b1; plot_col <= COL_OFF;
                 plot_x <= star_x(si); plot_y <= star_y(si);
                 if (si == NSTARS - 1) begin
                     vi <= 5'd0;
@@ -1595,11 +1631,11 @@ always @(posedge clk or negedge rst_n) begin
                                    sxv[edge_b(ship_sel, ei)],
                                    syv[edge_b(ship_sel, ei)]);
                         line_active <= 1'b1;
-                        plot_bit <= 1'b1;
+                        plot_col <= ship_sel ? COL_AI : COL_PL;
                         ei <= ei + 5'd1;
                     end
                 end else begin
-                    plot_bit <= 1'b1;
+                    plot_col <= ship_sel ? COL_AI : COL_PL;
                     if ((b_x >= 0) && (b_x < FB_W) && (b_y >= 0) && (b_y < FB_H)) begin
                         plot_en <= 1'b1;
                         plot_x <= b_x[9:0];
@@ -1625,9 +1661,9 @@ always @(posedge clk or negedge rst_n) begin
                         pflame1_y <= syv[hitch] - mul_q88(sin_a, 16'sd10);
                     end
                     line_active <= 1'b1;
-                    plot_bit <= 1'b1;
+                    plot_col <= ship_sel ? COL_AI : COL_PL;
                 end else begin
-                    plot_bit <= 1'b1;
+                    plot_col <= ship_sel ? COL_AI : COL_PL;
                     if ((b_x >= 0) && (b_x < FB_W) && (b_y >= 0) && (b_y < FB_H)) begin
                         plot_en <= 1'b1;
                         plot_x <= b_x[9:0];
@@ -1684,7 +1720,7 @@ always @(posedge clk or negedge rst_n) begin
                             start_line($signed({6'b0, bul_ox}), $signed({7'b0, bul_oy}),
                                        $signed({6'b0, bul_ox2}), $signed({7'b0, bul_oy2}));
                             line_active <= 1'b1;
-                            plot_bit    <= 1'b0;
+                            plot_col    <= COL_OFF;
                             ei <= 4'd1;
                         end else
                             ei <= 4'd1;
@@ -1706,7 +1742,7 @@ always @(posedge clk or negedge rst_n) begin
                                 bul_oy2 <= y1[8:0];
                             end
                             line_active   <= 1'b1;
-                            plot_bit      <= 1'b1;
+                            plot_col      <= COL_SHOT;
                             bul_have_prev <= 1'b1;
                             ei <= 4'd2;
                         end else begin
@@ -1718,7 +1754,7 @@ always @(posedge clk or negedge rst_n) begin
                             start_line($signed({6'b0, ebul_ox[0]}), $signed({7'b0, ebul_oy[0]}),
                                        $signed({6'b0, ebul_ox2[0]}), $signed({7'b0, ebul_oy2[0]}));
                             line_active <= 1'b1;
-                            plot_bit    <= 1'b0;
+                            plot_col    <= COL_OFF;
                             ei <= 4'd3;
                         end else
                             ei <= 4'd3;
@@ -1738,7 +1774,7 @@ always @(posedge clk or negedge rst_n) begin
                                 ebul_ox2[0] <= x1[9:0];
                                 ebul_oy2[0] <= y1[8:0];
                             end
-                            line_active <= 1'b1; plot_bit <= 1'b1;
+                            line_active <= 1'b1; plot_col <= COL_SHOT;
                             ebul_have_prev[0] <= 1'b1;
                             ei <= 4'd4;
                         end else begin
@@ -1749,7 +1785,7 @@ always @(posedge clk or negedge rst_n) begin
                         if (ebul_have_prev[1]) begin
                             start_line($signed({6'b0, ebul_ox[1]}), $signed({7'b0, ebul_oy[1]}),
                                        $signed({6'b0, ebul_ox2[1]}), $signed({7'b0, ebul_oy2[1]}));
-                            line_active <= 1'b1; plot_bit <= 1'b0;
+                            line_active <= 1'b1; plot_col <= COL_OFF;
                             ei <= 4'd5;
                         end else
                             ei <= 4'd5;
@@ -1769,7 +1805,7 @@ always @(posedge clk or negedge rst_n) begin
                                 ebul_ox2[1] <= x1[9:0];
                                 ebul_oy2[1] <= y1[8:0];
                             end
-                            line_active <= 1'b1; plot_bit <= 1'b1;
+                            line_active <= 1'b1; plot_col <= COL_SHOT;
                             ebul_have_prev[1] <= 1'b1;
                             ei <= 4'd6;
                         end else begin
@@ -1780,7 +1816,7 @@ always @(posedge clk or negedge rst_n) begin
                         if (ebul_have_prev[2]) begin
                             start_line($signed({6'b0, ebul_ox[2]}), $signed({7'b0, ebul_oy[2]}),
                                        $signed({6'b0, ebul_ox2[2]}), $signed({7'b0, ebul_oy2[2]}));
-                            line_active <= 1'b1; plot_bit <= 1'b0;
+                            line_active <= 1'b1; plot_col <= COL_OFF;
                             ei <= 4'd7;
                         end else
                             ei <= 4'd7;
@@ -1800,7 +1836,7 @@ always @(posedge clk or negedge rst_n) begin
                                 ebul_ox2[2] <= x1[9:0];
                                 ebul_oy2[2] <= y1[8:0];
                             end
-                            line_active <= 1'b1; plot_bit <= 1'b1;
+                            line_active <= 1'b1; plot_col <= COL_SHOT;
                             ebul_have_prev[2] <= 1'b1;
                             ei <= 4'd8;
                         end else begin
@@ -1835,7 +1871,7 @@ always @(posedge clk or negedge rst_n) begin
                                        boom_cx + {11'b0, boom_clen},
                                        boom_cy + {11'b0, boom_clen});
                             line_active <= 1'b1;
-                            plot_bit    <= 1'b0;
+                            plot_col    <= COL_OFF;
                             ei <= 4'd1;
                         end else
                             ei <= 4'd2;
@@ -1845,7 +1881,7 @@ always @(posedge clk or negedge rst_n) begin
                                    boom_cx + {11'b0, boom_clen},
                                    boom_cy - {11'b0, boom_clen});
                         line_active <= 1'b1;
-                        plot_bit    <= 1'b0;
+                        plot_col    <= COL_OFF;
                         ei <= 4'd2;
                     end else if (ei == 4'd2) begin
                         if (boom_cnt == 5'd0) begin
@@ -1864,7 +1900,7 @@ always @(posedge clk or negedge rst_n) begin
                                            boom_cy + {11'b0, L});
                             end
                             line_active <= 1'b1;
-                            plot_bit    <= 1'b1;
+                            plot_col    <= COL_SHOT;
                             ei <= 4'd3;
                         end
                     end else if (ei == 4'd3) begin
@@ -1873,7 +1909,7 @@ always @(posedge clk or negedge rst_n) begin
                                    boom_cx + {11'b0, boom_clen},
                                    boom_cy - {11'b0, boom_clen});
                         line_active <= 1'b1;
-                        plot_bit    <= 1'b1;
+                        plot_col    <= COL_SHOT;
                         ei <= 4'd4;
                     end else begin
                         if (boom_cnt == 5'd0) begin
