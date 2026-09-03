@@ -2,7 +2,9 @@
 
 **Not finished software.** This is an early start, not a complete game, not a product, and not a release. Expect it to change.
 
-A **space ship fighting game** (in progress) on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly a TOS-style Enterprise; an AI wedge chases and shoots poorly. Vector outlines, orange sun, bounce walls. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump.
+A **space ship fighting game** (in progress) on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly a TOS-style Enterprise; an AI wedge chases and shoots poorly. Vector outlines, orange sun, bounce walls, Pong-style scores. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump.
+
+![Tang Primer 20K Dock and 5" LCD running the space ship fighting demo](docs/20260903_014250.jpg)
 
 ## Hardware
 
@@ -24,7 +26,20 @@ A **space ship fighting game** (in progress) on the **Sipeed Tang Primer 20K Doc
 | S4 | C7 | Fire |
 | S0 | T10 | Reset |
 
-You fly a top-down TOS-style Enterprise. The other ship is an Asteroids-style wedge (AI).
+You fly a top-down TOS-style Enterprise. The other ship is an Asteroids-style wedge (AI). Thrust flame comes from the middle of the hull.
+
+## Scoreboard
+
+Pong-style **block digits** at the top of the LCD: **player left**, **AI right**. Two digits each. If a score goes below zero, a minus bar appears next to it. Range is −99 to 99. **S0** reset clears both scores.
+
+| Event | Player (left) | AI (right) |
+|---|---|---|
+| Your shot destroys the AI | +1 | — |
+| AI shot destroys you | — | +1 |
+| Ships crash into each other | −1 | −1 |
+| Hit the sun / bounce a wall | no score change | no score change |
+
+A crash also bounces the ships apart so it only counts once. Shot kills still boom (expanding X) then respawn.
 
 ## How it works
 
@@ -51,7 +66,7 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 | `src/top.v` | Glue: PLL, LCD, game, buttons |
 | `src/gowin_rpll.v` | 27 → 33 MHz rPLL |
 | `src/lcd_timing.v` | 800×480 timing, border, `frame_start` |
-| `src/space_wars.v` | Game: physics, AI, vectors, shots |
+| `src/space_wars.v` | Game: physics, AI, vectors, shots, scores |
 | `src/fb_ram.v` | 1-bit 800×480 BRAM |
 | `src/sin_cos.v` | Quarter-wave sine/cosine |
 | `src/tang20k_lcd.cst` | Pin constraints |
