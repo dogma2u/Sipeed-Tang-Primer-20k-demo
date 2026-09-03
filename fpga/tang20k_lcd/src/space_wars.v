@@ -28,6 +28,17 @@ localparam integer NSTARS   = 28;
 localparam integer MAXV     = 21;
 localparam integer BUL_LIFE = 28;
 localparam integer BOOM_N   = 16;
+localparam integer DIG_W    = 32;
+localparam integer DIG_H    = 56;
+localparam integer DIG_T    = 8;
+localparam integer DIG_G    = 8;
+localparam integer SC_Y     = 18;
+localparam integer SC0_MX   = 52;
+localparam integer SC0_TX   = 92;
+localparam integer SC0_OX   = 132;
+localparam integer SC1_MX   = 616;
+localparam integer SC1_TX   = 656;
+localparam integer SC1_OX   = 696;
 
 localparam [3:0] ST_IDLE   = 4'd0;
 localparam [3:0] ST_PHYS   = 4'd1;
@@ -92,6 +103,8 @@ reg signed [15:0] boom0_x, boom0_y, boom_x, boom_y;
 reg [4:0]         boom0_len_prev, boom_len_prev;
 reg               boom0_dirty, boom_dirty;
 reg               boom_sel;
+reg signed [7:0]  score0, score1;
+reg               ship_lock;
 
 reg [4:0]  vi;
 reg [4:0]  ei;
@@ -129,6 +142,88 @@ function signed [15:0] abs16;
     begin abs16 = v[15] ? -v : v; end
 endfunction
 
+function [6:0] seg7;
+    input [3:0] d;
+    begin
+        case (d)
+            4'd0: seg7 = 7'b0111111;
+            4'd1: seg7 = 7'b0000110;
+            4'd2: seg7 = 7'b1011011;
+            4'd3: seg7 = 7'b1001111;
+            4'd4: seg7 = 7'b1100110;
+            4'd5: seg7 = 7'b1101101;
+            4'd6: seg7 = 7'b1111101;
+            4'd7: seg7 = 7'b0000111;
+            4'd8: seg7 = 7'b1111111;
+            4'd9: seg7 = 7'b1101111;
+            default: seg7 = 7'b0000000;
+        endcase
+    end
+endfunction
+
+function [3:0] dec_tens;
+    input [6:0] v;
+    begin
+        if (v >= 7'd90)      dec_tens = 4'd9;
+        else if (v >= 7'd80) dec_tens = 4'd8;
+        else if (v >= 7'd70) dec_tens = 4'd7;
+        else if (v >= 7'd60) dec_tens = 4'd6;
+        else if (v >= 7'd50) dec_tens = 4'd5;
+        else if (v >= 7'd40) dec_tens = 4'd4;
+        else if (v >= 7'd30) dec_tens = 4'd3;
+        else if (v >= 7'd20) dec_tens = 4'd2;
+        else if (v >= 7'd10) dec_tens = 4'd1;
+        else                 dec_tens = 4'd0;
+    end
+endfunction
+
+function pong_digit;
+    input [9:0] px;
+    input [9:0] py;
+    input [9:0] ox;
+    input [9:0] oy;
+    input [3:0] d;
+    reg [9:0] rx;
+    reg [9:0] ry;
+    reg [6:0] s;
+    begin
+        pong_digit = 1'b0;
+        if ((px >= ox) && (px < (ox + DIG_W)) &&
+            (py >= oy) && (py < (oy + DIG_H))) begin
+            rx = px - ox;
+            ry = py - oy;
+            s  = seg7(d);
+            if (s[0] && (ry < DIG_T))
+                pong_digit = 1'b1;
+            if (s[3] && (ry >= (DIG_H - DIG_T)))
+                pong_digit = 1'b1;
+            if (s[6] && (ry >= ((DIG_H - DIG_T) / 2)) &&
+                (ry < ((DIG_H - DIG_T) / 2) + DIG_T))
+                pong_digit = 1'b1;
+            if (s[5] && (rx < DIG_T) && (ry < (DIG_H / 2)))
+                pong_digit = 1'b1;
+            if (s[4] && (rx < DIG_T) && (ry >= (DIG_H / 2)))
+                pong_digit = 1'b1;
+            if (s[1] && (rx >= (DIG_W - DIG_T)) && (ry < (DIG_H / 2)))
+                pong_digit = 1'b1;
+            if (s[2] && (rx >= (DIG_W - DIG_T)) && (ry >= (DIG_H / 2)))
+                pong_digit = 1'b1;
+        end
+    end
+endfunction
+
+function pong_minus;
+    input [9:0] px;
+    input [9:0] py;
+    input [9:0] ox;
+    input [9:0] oy;
+    begin
+        pong_minus = (px >= ox) && (px < (ox + DIG_W)) &&
+                     (py >= (oy + ((DIG_H - DIG_T) / 2))) &&
+                     (py <  (oy + ((DIG_H - DIG_T) / 2) + DIG_T));
+    end
+endfunction
+
 // Player: clean top-down TOS (saucer, neck, hull, two nacelles). Nose = +X.
 // Wedge: JS 4-point. kind 0=player, 1=AI
 function signed [7:0] shp_x;
@@ -155,6 +250,7 @@ function signed [7:0] shp_x;
                 5'd15: shp_x = -8'sd15; // stbd nacelle aft
                 5'd16: shp_x = -8'sd15;
                 5'd17: shp_x =  8'sd2;  // stbd nacelle nose
+                5'd18: shp_x = -8'sd12; // hull center aft (flame)
                 default: shp_x = 8'sd0;
             endcase
         end else begin
@@ -193,6 +289,7 @@ function signed [7:0] shp_y;
                 5'd15: shp_y = -8'sd6;
                 5'd16: shp_y = -8'sd8;
                 5'd17: shp_y = -8'sd8;
+                5'd18: shp_y =  8'sd0;
                 default: shp_y = 8'sd0;
             endcase
         end else begin
@@ -350,7 +447,7 @@ endtask
 task load_ship_geom;
     input kind;
     begin
-        if (!kind) begin nvert = 5'd18; nedge = 5'd22; hitch = 5'd11; end
+        if (!kind) begin nvert = 5'd19; nedge = 5'd22; hitch = 5'd18; end
         else       begin nvert = 5'd4;  nedge = 5'd4;  hitch = 5'd2; end
     end
 endtask
@@ -403,6 +500,22 @@ wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
 wire in_sun = in_fb_d && (srr_d <= (SUN_R * SUN_R));
 
+wire [7:0] score0_abs = score0[7] ? (~score0 + 8'd1) : score0;
+wire [7:0] score1_abs = score1[7] ? (~score1 + 8'd1) : score1;
+wire [3:0] s0_tens = dec_tens(score0_abs[6:0]);
+wire [3:0] s1_tens = dec_tens(score1_abs[6:0]);
+wire [6:0] s0_ten10 = {s0_tens, 3'b0} + {2'b0, s0_tens, 1'b0};
+wire [6:0] s1_ten10 = {s1_tens, 3'b0} + {2'b0, s1_tens, 1'b0};
+wire [3:0] s0_ones = score0_abs[6:0] - s0_ten10;
+wire [3:0] s1_ones = score1_abs[6:0] - s1_ten10;
+wire       score_hit =
+    (score0[7] && pong_minus(pix_x_d, pix_y_d, 10'd52,  10'd18)) ||
+    pong_digit(pix_x_d, pix_y_d, 10'd92,  10'd18, s0_tens) ||
+    pong_digit(pix_x_d, pix_y_d, 10'd132, 10'd18, s0_ones) ||
+    (score1[7] && pong_minus(pix_x_d, pix_y_d, 10'd616, 10'd18)) ||
+    pong_digit(pix_x_d, pix_y_d, 10'd656, 10'd18, s1_tens) ||
+    pong_digit(pix_x_d, pix_y_d, 10'd696, 10'd18, s1_ones);
+
 wire signed [15:0] boom_cx   = boom_sel ? boom_x : boom0_x;
 wire signed [15:0] boom_cy   = boom_sel ? boom_y : boom0_y;
 wire [4:0]         boom_clen = boom_sel ? boom_len_prev : boom0_len_prev;
@@ -417,7 +530,7 @@ always @(posedge clk) begin
         end else begin
             pix_r <= 5'h18; pix_g <= 6'h14; pix_b <= 5'h00;
         end
-    end else if (in_fb_d && rdata) begin
+    end else if (in_fb_d && (rdata || score_hit)) begin
         pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else begin
         pix_r <= 5'd0; pix_g <= 6'd0; pix_b <= 5'd0;
@@ -439,7 +552,7 @@ always @(posedge clk or negedge rst_n) begin
         phys_phase   <= 3'd0;
         ship_sel     <= 1'b0;
         vi <= 5'd0; ei <= 4'd0; si <= 5'd0;
-        nvert <= 5'd18; nedge <= 5'd22; hitch <= 5'd11;
+        nvert <= 5'd19; nedge <= 5'd22; hitch <= 5'd18;
         boom0_dirty    <= 1'b0;
         boom_dirty     <= 1'b0;
         bullet_on      <= 1'b0;
@@ -458,6 +571,9 @@ always @(posedge clk or negedge rst_n) begin
         boom0_len_prev <= 5'd0;
         boom_len_prev  <= 5'd0;
         boom_sel       <= 1'b0;
+        score0         <= 8'sd0;
+        score1         <= 8'sd0;
+        ship_lock      <= 1'b0;
         respawn0;
         respawn1;
     end else begin
@@ -647,7 +763,12 @@ always @(posedge clk or negedge rst_n) begin
                     if (boom1 != 5'd0)
                         boom1 <= boom1 - 5'd1;
                     ei <= 4'd4;
-                end else begin
+                end else begin : hits
+                    reg signed [15:0] bdx, bdy, adx, ady;
+                    reg signed [7:0]  n0, n1;
+                    reg               hit_ai, hit_pl, ram;
+                    n0 = score0; n1 = score1;
+                    hit_ai = 1'b0; hit_pl = 1'b0; ram = 1'b0;
                     if (bullet_on) begin
                         if ((bul_life == 6'd0) ||
                             (bul_x < (MARGIN <<< 8)) ||
@@ -655,8 +776,7 @@ always @(posedge clk or negedge rst_n) begin
                             (bul_y < (MARGIN <<< 8)) ||
                             (bul_y > ((FB_H - MARGIN) <<< 8)))
                             bullet_on <= 1'b0;
-                        else begin : hitchk
-                            reg signed [15:0] bdx, bdy, adx, ady;
+                        else begin
                             bdx = $signed(bul_x[23:8]) - $signed(pos1_x[23:8]);
                             bdy = $signed(bul_y[23:8]) - $signed(pos1_y[23:8]);
                             adx = bdx[15] ? -bdx : bdx;
@@ -667,6 +787,7 @@ always @(posedge clk or negedge rst_n) begin
                                 boom_dirty <= 1'b1;
                                 boom_x     <= $signed(pos1_x[23:8]);
                                 boom_y     <= $signed(pos1_y[23:8]);
+                                hit_ai     = 1'b1;
                             end else begin
                                 bdx = $signed(bul_x[23:8]) - 16'sd400;
                                 bdy = $signed(bul_y[23:8]) - 16'sd240;
@@ -682,8 +803,7 @@ always @(posedge clk or negedge rst_n) begin
                             (ebul_y < (MARGIN <<< 8)) ||
                             (ebul_y > ((FB_H - MARGIN) <<< 8)))
                             ebul_on <= 1'b0;
-                        else begin : ehitchk
-                            reg signed [15:0] bdx, bdy, adx, ady;
+                        else begin
                             bdx = $signed(ebul_x[23:8]) - $signed(pos0_x[23:8]);
                             bdy = $signed(ebul_y[23:8]) - $signed(pos0_y[23:8]);
                             adx = bdx[15] ? -bdx : bdx;
@@ -694,6 +814,7 @@ always @(posedge clk or negedge rst_n) begin
                                 boom0_dirty <= 1'b1;
                                 boom0_x     <= $signed(pos0_x[23:8]);
                                 boom0_y     <= $signed(pos0_y[23:8]);
+                                hit_pl      = 1'b1;
                             end else begin
                                 bdx = $signed(ebul_x[23:8]) - 16'sd400;
                                 bdy = $signed(ebul_y[23:8]) - 16'sd240;
@@ -702,6 +823,37 @@ always @(posedge clk or negedge rst_n) begin
                             end
                         end
                     end
+                    bdx = $signed(pos0_x[23:8]) - $signed(pos1_x[23:8]);
+                    bdy = $signed(pos0_y[23:8]) - $signed(pos1_y[23:8]);
+                    adx = bdx[15] ? -bdx : bdx;
+                    ady = bdy[15] ? -bdy : bdy;
+                    if ((boom0 == 5'd0) && (boom1 == 5'd0) &&
+                        (adx < 16'sd20) && (ady < 16'sd18)) begin
+                        if (!ship_lock) begin
+                            ram = 1'b1;
+                            vel0_x <= -vel0_x;
+                            vel0_y <= -vel0_y;
+                            vel1_x <= -vel1_x;
+                            vel1_y <= -vel1_y;
+                            if (!bdx[15]) begin
+                                pos0_x <= pos0_x + (24'sd8 <<< 8);
+                                pos1_x <= pos1_x - (24'sd8 <<< 8);
+                            end else begin
+                                pos0_x <= pos0_x - (24'sd8 <<< 8);
+                                pos1_x <= pos1_x + (24'sd8 <<< 8);
+                            end
+                        end
+                        ship_lock <= 1'b1;
+                    end else if ((adx >= 16'sd26) || (ady >= 16'sd24))
+                        ship_lock <= 1'b0;
+                    if (hit_ai && (n0 < 8'sd99)) n0 = n0 + 8'sd1;
+                    if (hit_pl && (n1 < 8'sd99)) n1 = n1 + 8'sd1;
+                    if (ram) begin
+                        if (n0 > -8'sd99) n0 = n0 - 8'sd1;
+                        if (n1 > -8'sd99) n1 = n1 - 8'sd1;
+                    end
+                    score0 <= n0;
+                    score1 <= n1;
                     ship_sel    <= 1'b0;
                     line_active <= 1'b0;
                     plot_bit    <= 1'b0;
@@ -727,9 +879,9 @@ always @(posedge clk or negedge rst_n) begin
                 if (!line_active) begin
                     if (ei == 4'd0) begin
                         load_ship_geom(ship_sel);
-                        nvert <= (!ship_sel) ? 5'd18 : 5'd4;
+                        nvert <= (!ship_sel) ? 5'd19 : 5'd4;
                         nedge <= (!ship_sel) ? 5'd22 : 5'd4;
-                        hitch <= (!ship_sel) ? 5'd11 : 5'd2;
+                        hitch <= (!ship_sel) ? 5'd18 : 5'd2;
                         ei <= 5'd1;
                     end else if ((ei - 5'd1) >= nedge) begin
                         if ((ship_sel ? prev_thrust1 : prev_thrust0)) begin
@@ -791,9 +943,9 @@ always @(posedge clk or negedge rst_n) begin
                         end
                     end else begin
                         ship_sel <= 1'b0;
-                        nvert    <= 5'd18;
+                        nvert    <= 5'd19;
                         nedge    <= 5'd22;
-                        hitch    <= 5'd11;
+                        hitch    <= 5'd18;
                         state    <= ST_XFORM;
                     end
                 end else
