@@ -6,7 +6,7 @@ A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the *
 
 Version **0.2.0** — see [CHANGELOG.md](CHANGELOG.md).
 
-![Tang Primer 20K Dock and LCD — Space Wars demo](docs/20260903_111322.jpg)
+![Tang Primer 20K Dock and LCD — Space Wars demo](docs/20260903_dock.jpg)
 
 ![Tang Primer 20K Dock and LCD — close-up](docs/20260903_111330.jpg)
 
