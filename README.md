@@ -1,10 +1,10 @@
-# Sipeed Tang Primer 20K demo
+# Sipeed Tang Primer 20K — Space Wars
 
-**This is starting to look like a real game.** Still a work in progress on FPGA — expect more changes — but the match loop (timer, lives, fuel, sun / black hole, attract, hyperspace) plays through on the Dock + 5" LCD.
+**Version 1.0.0 — first full release** of the board-tested working game on the Dock + 5" LCD.
 
 A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the **5" 800×480 RGB LCD**. You fly the **Diamond**; a yellow AI wedge hunts and shoots. Vector outlines, orange sun (and black hole), bounce walls, scores, fuel, and a countdown. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL — not a ROM dump.
 
-Version **0.3.0** — see [CHANGELOG.md](CHANGELOG.md).
+See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
 ![Tang Primer 20K Dock and LCD — Space Wars demo](docs/20260903_dock.jpg)
 

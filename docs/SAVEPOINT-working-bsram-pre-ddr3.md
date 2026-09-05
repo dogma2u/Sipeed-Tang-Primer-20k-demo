@@ -1,8 +1,9 @@
 # Savepoint: working BSRAM playfield (pre-DDR3 attempt)
 
 **Date:** 2026-09-05  
-**Status:** WORKING and BOARD-TESTED (James confirmed).  
-**Purpose:** Safe revert point before trying DDR3 for screen / playfield buffering.
+**Status:** WORKING and BOARD-TESTED (James confirmed; includes minus bar + thrust/maxv tweaks @ `5743da8`).  
+**Release:** **v1.0.0** on `main` (first full release).  
+**Purpose:** Known-good BSRAM playfield baseline.
 
 ## Git
 

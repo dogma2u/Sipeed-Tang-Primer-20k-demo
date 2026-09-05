@@ -1,6 +1,23 @@
 # Changelog
 
-All notable changes to the Sipeed Tang Primer 20K Space Wars–style demo.
+All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
+
+## [1.0.0] — 2026-09-05
+
+First full release of the board-tested working game (BSRAM playfield).
+
+### Highlights
+- Tang Primer 20K Dock + 5" 800x480 RGB LCD playable match loop
+- Diamond (player) vs yellow AI wedge; attract demo; hyperspace (S0)
+- Scores, lives, fuel, MM:SS timer, sun / black hole, vanish deaths
+- Board-OK polish: shorter negative-score minus bar; thrust x1.5; max speed 16
+
+### Baseline
+- Branch / tag: `v1.0.0` from known-good BSRAM tree (`savepoint/working-bsram-pre-ddr3`)
+- See `docs/SAVEPOINT-working-bsram-pre-ddr3.md` and `docs/Gowin-copy-bsram.txt`
+
+### Not in 1.0.0
+- DDR3 framebuffer, death segment-drift anim, config menu UI, green-sun secret
 
 ## [0.3.0] — 2026-09-05
 
@@ -23,7 +40,6 @@ Attract demo, hyperspace, vanish deaths, config header, HUD digit latch.
 - README aligned with board behavior
 
 ### Notes
-- Deferred: death segment-drift (todo 10) — see `docs/deferred-9-10-11.md`
 - AG0100/AG0101 WARNs alone are not treated as fail if bitstream plays
 
 ## [0.2.0] — 2026-09-03
