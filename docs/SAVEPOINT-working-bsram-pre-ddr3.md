@@ -62,8 +62,8 @@ ASCII-only in `.v` / `.vh` comments (Education parser).
 
 ## Todo list at savepoint (open only)
 
-1. Compress large docs/ JPGs
-2. GitHub About blurb on Sipeed repo (manual Edit description)
+1. ~~Compress large docs/ JPGs~~ (replaced with docs/game.mp4; JPGs removed)
+2. ~~GitHub About blurb on Sipeed repo~~ (set on GitHub)
 3. Config menu: wire sw_config.vh knobs to runtime regs / UI
 4. Optional AI-only CFG_AI_MAXV_* max-speed ramp (reserved, not applied)
 6. Secret green sun: 50 user shots to sun/BH -> green; strong +/-/random grav on AI only (incl. demo); Diamond exploits; knobs in sw_config only, NOT in README
