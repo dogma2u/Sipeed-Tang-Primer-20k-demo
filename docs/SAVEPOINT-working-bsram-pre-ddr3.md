@@ -9,7 +9,7 @@
 
 - **Branch (push target):** `savepoint/working-bsram-pre-ddr3`
 - **Remote:** `origin` → `https://github.com/dogma2u/Sipeed-Tang-Primer-20k-demo.git` (current workspace `origin`; this is where the Tang LCD project history lives)
-- **Version at save:** `0.3.0` (see `VERSION`, `CHANGELOG.md`)
+- **Version at save / release:** `1.0.0` (see `VERSION`, `CHANGELOG.md`; tag `v1.0.0`)
 - **How to revert if DDR3 work fails:**
   1. `git fetch origin`
   2. `git checkout savepoint/working-bsram-pre-ddr3`
