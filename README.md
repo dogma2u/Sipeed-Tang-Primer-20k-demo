@@ -6,9 +6,7 @@ A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the *
 
 See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
-<video src="docs/game.mp4" controls width="720"></video>
-
-[Watch gameplay (MP4)](docs/game.mp4)
+![Space Wars gameplay](docs/game.mp4)
 
 ## Hardware
 
