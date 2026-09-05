@@ -28,7 +28,7 @@ Attract demo, hyperspace, vanish deaths, config header, HUD digit latch.
 - **PUSH FIRE TO START** (bright green) after boot and GAME OVER; fire soft-starts when draw idle
 - **S0 hyperspace** (`btn_hyper_n` on T10): vanish ~1 s -> random warp -> ~1.5 s red/green flash @ ~10 Hz + invuln
 - Reset is **PLL lock only** (no button reset)
-- Spawn invuln **1.5 s**; sun/shot deaths **vanish** then respawn (no boom X)
+- Spawn invuln **1.5 s**; sun/shot deaths **vanish** then respawn
 - AI shot life capped at **<= 75%** player; AI playtime ramps through **5:00**
 - Shot bank **8** (player 0-4, AI 5-7)
 - `sw_config.vh` knobs: `` `include `` from `sw_physics.v` **and** listed on Gowin FileList
@@ -36,7 +36,7 @@ Attract demo, hyperspace, vanish deaths, config header, HUD digit latch.
 
 ### Changed
 - Match timer encoding remains **MMx100+SS** (starts **01:30**); score **999 -> 0** rollover
-- Kill/sun/BH: no expanding X; draw boom ports tied off
+- Kill/sun/BH: vanish then respawn
 - README aligned with board behavior
 
 ### Notes

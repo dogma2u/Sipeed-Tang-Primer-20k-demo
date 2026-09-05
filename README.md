@@ -6,7 +6,7 @@ A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the *
 
 See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
-https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664
+<video src="https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664" controls autoplay muted loop playsinline width="100%"></video>
 
 ## Hardware
 
@@ -22,11 +22,11 @@ https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664
 
 | Button | Pin | Action |
 |---|---|---|
+| S0 | T10 | Hyperspace |
 | S1 | T3 | Rotate left |
 | S2 | T2 | Rotate right |
 | S3 | D7 | Thrust |
 | S4 | C7 | Fire |
-| S0 | T10 | Hyperspace |
 
 FPGA reset is **PLL lock only** (no button reset). **S0** is hyperspace: ship vanishes ~1 s, warps to a random spot, then flashes red/green ~1.5 s at ~10 Hz with spawn invulnerability.
 
@@ -47,7 +47,7 @@ Pong-style **block digits** at the top of the LCD: **player left**, **AI right**
 | Ships crash into each other | -1 | -1 | -- |
 | Hit the sun / bounce a wall | no score change | no score change | -- |
 
-A crash also bounces the ships apart so it only counts once. Deaths **vanish** then respawn (AI always; player only if lives remain). No boom X. Respawn can land anywhere (including on the sun); **1.5 s** invuln after spawn. Sun/BH kills park the ship off-screen briefly, then respawn with **zero velocity**.
+A crash also bounces the ships apart so it only counts once. Deaths **vanish** then respawn (AI always; player only if lives remain). Respawn can land anywhere (including on the sun); **1.5 s** invuln after spawn. Sun/BH kills park the ship off-screen briefly, then respawn with **zero velocity**.
 
 **Game over.** When the timer reaches **0:00**, or the player has **no lives left**, play freezes and block **GAME OVER** flashes in the center (2 times per second, 50% duty), with **PUSH FIRE TO START** below.
 

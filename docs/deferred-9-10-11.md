@@ -12,9 +12,9 @@ Status: **cancelled**. Single FB + drop `frame_start` while `draw_busy` + FF-pip
 
 ## Todo 10 — Death segment-drift (deferred)
 
-Intent: ~1 s breakup of ship segments that drift outward, then respawn — without flooding the framebuffer (prior expand/boom attempts failed or looked wrong).
+Intent: ~1 s breakup of ship segments that drift outward, then respawn — without flooding the framebuffer.
 
-Status: **deferred**. Current deaths are vanish + park + respawn (no X, no debris anim).
+Status: **deferred**. Current deaths are vanish + park + respawn.
 
 ## Todo 9 — Attract demo
 
