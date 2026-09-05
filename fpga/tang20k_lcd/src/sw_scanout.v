@@ -39,6 +39,8 @@ localparam integer FUEL_MS_PER_PX = 288;
 localparam integer DIG_W    = 32;
 localparam integer DIG_H    = 56;
 localparam integer DIG_T    = 8;
+localparam integer MINUS_W  = 16; // short bar (was DIG_W=32 -- too long on AI score)
+localparam integer MINUS_GAP = 4;
 localparam integer LIFE_W   = 12;
 localparam integer LIFE_H   = 10;
 localparam integer GO_SCALE = 4; // power of 2 -> shift, not /6
@@ -108,7 +110,7 @@ function hud_mark;
     begin
         hud_mark = 1'b0;
         if (kind == 2'd1) begin
-            hud_mark = (px >= ox) && (px < (ox + DIG_W)) &&
+            hud_mark = (px >= ox) && (px < (ox + MINUS_W)) &&
                        (py >= (oy + ((DIG_H - DIG_T) / 2))) &&
                        (py <  (oy + ((DIG_H - DIG_T) / 2) + DIG_T));
         end else if (kind == 2'd2) begin
@@ -456,8 +458,8 @@ always @(posedge clk) begin
                    (score0_abs >= 10'd10)  ? 10'd92 : 10'd132;
         s1_first = (score1_abs >= 10'd100) ? 10'd616 :
                    (score1_abs >= 10'd10)  ? 10'd656 : 10'd696;
-        s0_minus_x_r <= s0_first - DIG_W[9:0];
-        s1_minus_x_r <= s1_first - DIG_W[9:0];
+        s0_minus_x_r <= s0_first - MINUS_W[9:0] - MINUS_GAP[9:0];
+        s1_minus_x_r <= s1_first - MINUS_W[9:0] - MINUS_GAP[9:0];
 
         tm_prod  = timer_sec * 20'd10486;
         tm_hi14  = {6'd0, tm_prod[27:20]};

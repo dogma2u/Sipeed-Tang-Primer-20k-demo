@@ -65,20 +65,20 @@ ASCII-only in `.v` / `.vh` comments (Education parser).
 2. GitHub About blurb on Sipeed repo (manual Edit description)
 3. Config menu: wire sw_config.vh knobs to runtime regs / UI
 4. Optional AI-only CFG_AI_MAXV_* max-speed ramp (reserved, not applied)
-5. Death segment-drift (~1s breakup then respawn; no FB flood; careful vs prior expand fail)
 6. Secret green sun: 50 user shots to sun/BH -> green; strong +/-/random grav on AI only (incl. demo); Diamond exploits; knobs in sw_config only, NOT in README
 7. BH->sun outward 1/r^2 push lasts CFG_ANTI_GRAV_SEC (10s) then clears; soft match reset path (not full FPGA/PLL reset)
-8. Minus sign for negative score too long on right-side (AI) score
-9. Make thrust another 1.5x (on top of current demo DEMO_THRUST); reduce max speed by 25%
-11. Border 5px all sides -> playable FB 790x470; check if enough BSRAM for full double-buffer (frame/border no buffer) -- **BSRAM math: not enough for 2nd 2-bit page**
-12. (Next attempt, after this branch is pushed) Try DDR3 for screen / playfield buffering -- major; revert to this savepoint if it fails
+8. ~~Minus sign for negative score too long on right-side (AI) score~~ (board OK 2026-09-05; MINUS_W=16)
+9. ~~Make thrust another 1.5x (on top of current demo DEMO_THRUST); reduce max speed by 25%~~ (board OK 2026-09-05; PL/AI thr x1.5, SHIP_MAXV 16)
 
 ## Explicitly cancelled / not in this baseline
 - Full BSRAM double-buffer playfield (does not fit)
+- Border 5px all sides -> playable FB 790x470 (cancelled; BSRAM not enough for 2nd page)
+- DDR3 playfield buffering (attempted then abandoned; local sources removed)
+- Death segment-drift / breakup anim (tried scanout-only; no visible change on board; reverted)
 - Nacelles, AI L/C/R guns, button debounce (skipped)
 - Boom X death anim
 
-## Notes for DDR3 attempt (upcoming)
+## Notes for DDR3 (parked)
 - SOM has 128 MB DDR3 -- capacity OK for multi-page FB
-- Needs DDR3 controller/PHY, clocks, scanout FIFO, draw burst path
-- Keep this BSRAM design intact on `savepoint/working-bsram-pre-ddr3` until DDR3 is proven on board
+- Needs DDR3 controller/PHY, clocks, scanout FIFO, draw burst path, SystemVerilog
+- Keep this BSRAM design intact; do not mix Desktop zip trees with this repo

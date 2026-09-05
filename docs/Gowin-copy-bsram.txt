@@ -1,0 +1,25 @@
+# Gowin copy set -- BSRAM baseline
+
+Use ONLY this repo tree (not Desktop zips):
+  C:\Users\dogma\Oscillator_replacement\fpga\tang20k_lcd\
+
+Git branch: savepoint/working-bsram-pre-ddr3 (board-tested BSRAM)
+See docs/SAVEPOINT-working-bsram-pre-ddr3.md
+
+## Synth language
+Verilog-2001 is fine for this baseline (no SystemVerilog required).
+
+## Copy into Gowin (FileList)
+- src/top.v
+- src/space_wars.v
+- src/sw_draw.v
+- src/sw_physics.v
+- src/sw_scanout.v
+- src/sw_config.vh
+- src/fb_ram.v
+- src/sin_cos.v
+- src/lcd_timing.v
+- src/gowin_rpll.v
+- src/tang20k_lcd.cst
+- src/tang20k_lcd.sdc
+- tang20k_lcd.gprj

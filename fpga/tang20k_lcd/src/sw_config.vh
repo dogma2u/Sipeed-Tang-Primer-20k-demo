@@ -32,7 +32,7 @@
 `define CFG_FIRE_GAP_FR     5
 `define CFG_FIRE_RELOAD_FR  25
 `define CFG_FIRE_MAG_MAX    5
-`define CFG_PL_THRUST       40
+`define CFG_PL_THRUST       60
 
 // --- Lives / fuel / score / timer ---
 `define CFG_LIFE_MAX        5
@@ -84,16 +84,17 @@
 `define CFG_AI_BP_THR_0     75
 `define CFG_AI_BP_THR_1     150
 `define CFG_AI_BP_THR_2     225
-`define CFG_AI_THR_0        12
-`define CFG_AI_THR_1        20
-`define CFG_AI_THR_2        28
-`define CFG_AI_THR_3        40
+`define CFG_AI_THR_0        18
+`define CFG_AI_THR_1        30
+`define CFG_AI_THR_2        42
+`define CFG_AI_THR_3        60
 `define CFG_AI_WILD_SEC     150
-`define CFG_AI_MAXV_0       10
-`define CFG_AI_MAXV_1       16
-`define CFG_AI_MAXV_2       21
-// Demo attract: top ship speed clamp (px/frame Q8.8); thrust = this * CFG_DEMO_THR_NUM/DEN
-`define CFG_SHIP_MAXV       21
+`define CFG_AI_MAXV_0       8
+`define CFG_AI_MAXV_1       12
+`define CFG_AI_MAXV_2       16
+// Demo attract: speed clamp; thrust = AI_THR_3 * NUM/DEN
+// SHIP_MAXV was 21, now -25% -> 16
+`define CFG_SHIP_MAXV       16
 `define CFG_DEMO_THR_NUM    3
 `define CFG_DEMO_THR_DEN    2
 

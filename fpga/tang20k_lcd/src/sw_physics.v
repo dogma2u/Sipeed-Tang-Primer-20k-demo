@@ -139,7 +139,7 @@ localparam integer AI_THR_3       = `CFG_AI_THR_3;
 localparam integer SHIP_MAXV      = `CFG_SHIP_MAXV;
 localparam integer DEMO_THR_NUM   = `CFG_DEMO_THR_NUM;
 localparam integer DEMO_THR_DEN   = `CFG_DEMO_THR_DEN;
-// Attract: full top thrust * 1.5 (not playtime ramp)
+// Attract: full top thrust * NUM/DEN (not playtime ramp)
 localparam signed [15:0] DEMO_THRUST = (AI_THR_3 * DEMO_THR_NUM) / DEMO_THR_DEN;
 localparam signed [15:0] SHIP_MAXV_Q88 = SHIP_MAXV <<< 8;
 
