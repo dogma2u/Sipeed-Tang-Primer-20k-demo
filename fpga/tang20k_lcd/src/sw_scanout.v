@@ -8,18 +8,21 @@ module sw_scanout (
     input  wire [1:0] rdata,
     input  wire       black_hole,
     input  wire       game_over,
+    input  wire       await_start,
     input  wire [5:0] frame_cnt,
     input  wire [13:0] timer_sec,
-    input  wire signed [9:0] score0,
-    input  wire signed [9:0] score1,
+    input  wire signed [10:0] score0,
+    input  wire signed [10:0] score1,
     input  wire [2:0] lives0,
     input  wire [14:0] fuel_ms,
+    input  wire       pl_flash_red,
+    input  wire       pl_hs_flash,
     output reg  [4:0] pix_r,
     output reg  [5:0] pix_g,
     output reg  [4:0] pix_b
 );
 
-// Gowin Education often fails `include — keep constants local.
+// Gowin Education often fails include of .vh -- keep constants local.
 localparam integer FB_W   = 800;
 localparam integer FB_H   = 470;
 localparam integer SUN_R  = 18;
@@ -36,9 +39,11 @@ localparam integer FUEL_MS_PER_PX = 288;
 localparam integer DIG_W    = 32;
 localparam integer DIG_H    = 56;
 localparam integer DIG_T    = 8;
+localparam integer MINUS_W  = 16; // short bar (was DIG_W=32 -- too long on AI score)
+localparam integer MINUS_GAP = 4;
 localparam integer LIFE_W   = 12;
 localparam integer LIFE_H   = 10;
-localparam integer GO_SCALE = 6;
+localparam integer GO_SCALE = 4; // power of 2 -> shift, not /6
 
 localparam [1:0] COL_OFF  = 2'b00;
 localparam [1:0] COL_PL   = 2'b01;
@@ -105,7 +110,7 @@ function hud_mark;
     begin
         hud_mark = 1'b0;
         if (kind == 2'd1) begin
-            hud_mark = (px >= ox) && (px < (ox + DIG_W)) &&
+            hud_mark = (px >= ox) && (px < (ox + MINUS_W)) &&
                        (py >= (oy + ((DIG_H - DIG_T) / 2))) &&
                        (py <  (oy + ((DIG_H - DIG_T) / 2) + DIG_T));
         end else if (kind == 2'd2) begin
@@ -178,50 +183,93 @@ function fuel_gauge;
 endfunction
 
 function [4:0] glyph_row;
-    input [2:0] ch, row;
+    input [3:0] ch, row;
     begin
         case (ch)
-            3'd0: case (row)
-                3'd0: glyph_row=5'b01110; 3'd1: glyph_row=5'b10001;
-                3'd2: glyph_row=5'b10000; 3'd3: glyph_row=5'b10111;
-                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+            4'd0: case (row)
+                4'd0: glyph_row=5'b01110; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10000; 4'd3: glyph_row=5'b10111;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b10001;
                 default: glyph_row=5'b01110;
             endcase
-            3'd1: case (row)
-                3'd0: glyph_row=5'b01110; 3'd1: glyph_row=5'b10001;
-                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b11111;
-                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+            4'd1: case (row)
+                4'd0: glyph_row=5'b01110; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b11111;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b10001;
                 default: glyph_row=5'b10001;
             endcase
-            3'd2: case (row)
-                3'd0: glyph_row=5'b10001; 3'd1: glyph_row=5'b11011;
-                3'd2: glyph_row=5'b10101; 3'd3: glyph_row=5'b10001;
-                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+            4'd2: case (row)
+                4'd0: glyph_row=5'b10001; 4'd1: glyph_row=5'b11011;
+                4'd2: glyph_row=5'b10101; 4'd3: glyph_row=5'b10001;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b10001;
                 default: glyph_row=5'b10001;
             endcase
-            3'd3: case (row)
-                3'd0: glyph_row=5'b11111; 3'd1: glyph_row=5'b10000;
-                3'd2: glyph_row=5'b10000; 3'd3: glyph_row=5'b11110;
-                3'd4: glyph_row=5'b10000; 3'd5: glyph_row=5'b10000;
+            4'd3: case (row)
+                4'd0: glyph_row=5'b11111; 4'd1: glyph_row=5'b10000;
+                4'd2: glyph_row=5'b10000; 4'd3: glyph_row=5'b11110;
+                4'd4: glyph_row=5'b10000; 4'd5: glyph_row=5'b10000;
                 default: glyph_row=5'b11111;
             endcase
-            3'd4: case (row)
-                3'd0: glyph_row=5'b01110; 3'd1: glyph_row=5'b10001;
-                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b10001;
-                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b10001;
+            4'd4: case (row)
+                4'd0: glyph_row=5'b01110; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b10001;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b10001;
                 default: glyph_row=5'b01110;
             endcase
-            3'd5: case (row)
-                3'd0: glyph_row=5'b10001; 3'd1: glyph_row=5'b10001;
-                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b10001;
-                3'd4: glyph_row=5'b10001; 3'd5: glyph_row=5'b01010;
+            4'd5: case (row)
+                4'd0: glyph_row=5'b10001; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b10001;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b01010;
                 default: glyph_row=5'b00100;
             endcase
-            3'd6: case (row)
-                3'd0: glyph_row=5'b11110; 3'd1: glyph_row=5'b10001;
-                3'd2: glyph_row=5'b10001; 3'd3: glyph_row=5'b11110;
-                3'd4: glyph_row=5'b10100; 3'd5: glyph_row=5'b10010;
+            4'd6: case (row)
+                4'd0: glyph_row=5'b11110; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b11110;
+                4'd4: glyph_row=5'b10100; 4'd5: glyph_row=5'b10010;
                 default: glyph_row=5'b10001;
+            endcase
+            // 8=P 9=U 10=S 11=H 12=F 13=I 14=T
+            4'd8: case (row)
+                4'd0: glyph_row=5'b11110; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b11110;
+                4'd4: glyph_row=5'b10000; 4'd5: glyph_row=5'b10000;
+                default: glyph_row=5'b10000;
+            endcase
+            4'd9: case (row)
+                4'd0: glyph_row=5'b10001; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b10001;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b10001;
+                default: glyph_row=5'b01110;
+            endcase
+            4'd10: case (row)
+                4'd0: glyph_row=5'b01111; 4'd1: glyph_row=5'b10000;
+                4'd2: glyph_row=5'b10000; 4'd3: glyph_row=5'b01110;
+                4'd4: glyph_row=5'b00001; 4'd5: glyph_row=5'b00001;
+                default: glyph_row=5'b11110;
+            endcase
+            4'd11: case (row)
+                4'd0: glyph_row=5'b10001; 4'd1: glyph_row=5'b10001;
+                4'd2: glyph_row=5'b10001; 4'd3: glyph_row=5'b11111;
+                4'd4: glyph_row=5'b10001; 4'd5: glyph_row=5'b10001;
+                default: glyph_row=5'b10001;
+            endcase
+            4'd12: case (row)
+                4'd0: glyph_row=5'b11111; 4'd1: glyph_row=5'b10000;
+                4'd2: glyph_row=5'b10000; 4'd3: glyph_row=5'b11110;
+                4'd4: glyph_row=5'b10000; 4'd5: glyph_row=5'b10000;
+                default: glyph_row=5'b10000;
+            endcase
+            4'd13: case (row)
+                4'd0: glyph_row=5'b01110; 4'd1: glyph_row=5'b00100;
+                4'd2: glyph_row=5'b00100; 4'd3: glyph_row=5'b00100;
+                4'd4: glyph_row=5'b00100; 4'd5: glyph_row=5'b00100;
+                default: glyph_row=5'b01110;
+            endcase
+            4'd14: case (row)
+                4'd0: glyph_row=5'b11111; 4'd1: glyph_row=5'b00100;
+                4'd2: glyph_row=5'b00100; 4'd3: glyph_row=5'b00100;
+                4'd4: glyph_row=5'b00100; 4'd5: glyph_row=5'b00100;
+                default: glyph_row=5'b00100;
             endcase
             default: glyph_row = 5'b00000;
         endcase
@@ -230,22 +278,22 @@ endfunction
 
 function block_letter;
     input [9:0] px, py, ox, oy;
-    input [2:0] ch;
+    input [3:0] ch;
     reg [9:0] rx, ry, qcol, qrow;
     reg [2:0] col, row;
     reg [4:0] bits;
     begin
         block_letter = 1'b0;
-        if ((ch != 3'd7) &&
+        if ((ch != 4'd7) &&
             (px >= ox) && (px < (ox + 5*GO_SCALE)) &&
             (py >= oy) && (py < (oy + 7*GO_SCALE))) begin
             rx   = px - ox;
             ry   = py - oy;
-            qcol = rx / GO_SCALE;
-            qrow = ry / GO_SCALE;
+            qcol = rx >> 2; // GO_SCALE=4
+            qrow = ry >> 2;
             col  = qcol[2:0];
             row  = qrow[2:0];
-            bits = glyph_row(ch, row);
+            bits = glyph_row(ch, {1'b0, row});
             case (col)
                 3'd0: if (bits[4]) block_letter = 1'b1;
                 3'd1: if (bits[3]) block_letter = 1'b1;
@@ -261,15 +309,39 @@ endfunction
 function game_over_text;
     input [9:0] px, py;
     begin
+        // GO_SCALE=4, pitch 24; centered ~300..500
         game_over_text =
-            block_letter(px, py, 10'd241, 10'd219, 3'd0) ||
-            block_letter(px, py, 10'd277, 10'd219, 3'd1) ||
-            block_letter(px, py, 10'd313, 10'd219, 3'd2) ||
-            block_letter(px, py, 10'd349, 10'd219, 3'd3) ||
-            block_letter(px, py, 10'd421, 10'd219, 3'd4) ||
-            block_letter(px, py, 10'd457, 10'd219, 3'd5) ||
-            block_letter(px, py, 10'd493, 10'd219, 3'd3) ||
-            block_letter(px, py, 10'd529, 10'd219, 3'd6);
+            block_letter(px, py, 10'd300, 10'd140, 4'd0) ||
+            block_letter(px, py, 10'd324, 10'd140, 4'd1) ||
+            block_letter(px, py, 10'd348, 10'd140, 4'd2) ||
+            block_letter(px, py, 10'd372, 10'd140, 4'd3) ||
+            block_letter(px, py, 10'd420, 10'd140, 4'd4) ||
+            block_letter(px, py, 10'd444, 10'd140, 4'd5) ||
+            block_letter(px, py, 10'd468, 10'd140, 4'd3) ||
+            block_letter(px, py, 10'd492, 10'd140, 4'd6);
+    end
+endfunction
+
+function push_fire_text;
+    input [9:0] px, py;
+    begin
+        // GO_SCALE=4, pitch 24; centered block
+        push_fire_text =
+            block_letter(px, py, 10'd204, 10'd340, 4'd8) ||
+            block_letter(px, py, 10'd228, 10'd340, 4'd9) ||
+            block_letter(px, py, 10'd252, 10'd340, 4'd10) ||
+            block_letter(px, py, 10'd276, 10'd340, 4'd11) ||
+            block_letter(px, py, 10'd312, 10'd340, 4'd12) ||
+            block_letter(px, py, 10'd336, 10'd340, 4'd13) ||
+            block_letter(px, py, 10'd360, 10'd340, 4'd6) ||
+            block_letter(px, py, 10'd384, 10'd340, 4'd3) ||
+            block_letter(px, py, 10'd420, 10'd340, 4'd14) ||
+            block_letter(px, py, 10'd444, 10'd340, 4'd4) ||
+            block_letter(px, py, 10'd480, 10'd340, 4'd10) ||
+            block_letter(px, py, 10'd504, 10'd340, 4'd14) ||
+            block_letter(px, py, 10'd528, 10'd340, 4'd1) ||
+            block_letter(px, py, 10'd552, 10'd340, 4'd6) ||
+            block_letter(px, py, 10'd576, 10'd340, 4'd14);
     end
 endfunction
 
@@ -314,97 +386,150 @@ wire        in_fb = de_now && (pix_x < FB_W) && (pix_y < FB_H);
 reg         in_fb_d;
 reg [9:0]   pix_x_d, pix_y_d;
 
+// Latched HUD fields (FF) -- digit/fuel trees run once/clk, not as pixel combo
+reg [3:0]  tm_htens_r, tm_hones_r, tm_ltens_r, tm_lones_r;
+reg [3:0]  s0_hund_r, s0_tens_r, s0_ones_r;
+reg [3:0]  s1_hund_r, s1_tens_r, s1_ones_r;
+reg        s0_neg_r, s1_neg_r;
+reg        s0_show_h_r, s0_show_t_r, s1_show_h_r, s1_show_t_r;
+reg [9:0]  s0_minus_x_r, s1_minus_x_r;
+reg [9:0]  fuel_fill_h_r;
+reg        go_flash_r;
+reg        pl_hs_flash_r, pl_flash_red_r;
+reg        black_hole_r;
+reg [2:0]  lives0_r;
+reg [13:0] timer_sec_r;
+reg [14:0] fuel_ms_r;
+
 always @(posedge clk) begin
     in_fb_d <= in_fb;
     pix_x_d <= pix_x;
     pix_y_d <= pix_y;
+    // Snapshot slow-changing HUD inputs into FFs
+    begin : hud_latch
+        reg [10:0] score0_mag, score1_mag;
+        reg [9:0]  score0_abs, score1_abs;
+        reg [3:0]  s0_hund, s1_hund, s0_tens, s1_tens;
+        reg [9:0]  s0_rem, s1_rem;
+        reg [6:0]  s0_ten10, s1_ten10, s0_ones7, s1_ones7;
+        reg [9:0]  s0_first, s1_first;
+        reg [27:0] tm_prod;
+        reg [13:0] tm_hi14, tm_x100, tm_lo14;
+        reg [6:0]  tm_hi, tm_lo, tm_hten10, tm_hones7, tm_lten10, tm_lones7;
+        reg [3:0]  tm_htens, tm_ltens;
+        reg [14:0] fuel_px;
+
+        black_hole_r   <= black_hole;
+        lives0_r       <= lives0;
+        timer_sec_r    <= timer_sec;
+        fuel_ms_r      <= fuel_ms;
+        pl_hs_flash_r  <= pl_hs_flash;
+        pl_flash_red_r <= pl_flash_red;
+        go_flash_r     <= (frame_cnt < 6'd13) ||
+                          ((frame_cnt >= 6'd25) && (frame_cnt < 6'd38));
+
+        score0_mag = score0[10] ? -score0 : score0;
+        score1_mag = score1[10] ? -score1 : score1;
+        score0_abs = score0_mag[9:0];
+        score1_abs = score1_mag[9:0];
+        s0_hund = dec_hundreds(score0_abs);
+        s1_hund = dec_hundreds(score1_abs);
+        s0_rem  = score0_abs - ({6'b0, s0_hund} * 10'd100);
+        s1_rem  = score1_abs - ({6'b0, s1_hund} * 10'd100);
+        s0_tens = dec_tens(s0_rem[6:0]);
+        s1_tens = dec_tens(s1_rem[6:0]);
+        s0_ten10 = {s0_tens, 3'b0} + {2'b0, s0_tens, 1'b0};
+        s1_ten10 = {s1_tens, 3'b0} + {2'b0, s1_tens, 1'b0};
+        s0_ones7 = s0_rem[6:0] - s0_ten10;
+        s1_ones7 = s1_rem[6:0] - s1_ten10;
+        s0_hund_r <= s0_hund;
+        s0_tens_r <= s0_tens;
+        s0_ones_r <= s0_ones7[3:0];
+        s1_hund_r <= s1_hund;
+        s1_tens_r <= s1_tens;
+        s1_ones_r <= s1_ones7[3:0];
+        s0_neg_r    <= score0[10];
+        s1_neg_r    <= score1[10];
+        s0_show_h_r <= (score0_abs >= 10'd100);
+        s0_show_t_r <= (score0_abs >= 10'd10);
+        s1_show_h_r <= (score1_abs >= 10'd100);
+        s1_show_t_r <= (score1_abs >= 10'd10);
+        s0_first = (score0_abs >= 10'd100) ? 10'd52 :
+                   (score0_abs >= 10'd10)  ? 10'd92 : 10'd132;
+        s1_first = (score1_abs >= 10'd100) ? 10'd616 :
+                   (score1_abs >= 10'd10)  ? 10'd656 : 10'd696;
+        s0_minus_x_r <= s0_first - MINUS_W[9:0] - MINUS_GAP[9:0];
+        s1_minus_x_r <= s1_first - MINUS_W[9:0] - MINUS_GAP[9:0];
+
+        tm_prod  = timer_sec * 20'd10486;
+        tm_hi14  = {6'd0, tm_prod[27:20]};
+        tm_x100  = (tm_hi14 << 6) + (tm_hi14 << 5) + (tm_hi14 << 2);
+        tm_lo14  = timer_sec - tm_x100;
+        tm_hi    = tm_hi14[6:0];
+        tm_lo    = tm_lo14[6:0];
+        tm_htens = dec_tens(tm_hi);
+        tm_hten10 = {tm_htens, 3'b0} + {2'b0, tm_htens, 1'b0};
+        tm_hones7 = tm_hi - tm_hten10;
+        tm_ltens = dec_tens(tm_lo);
+        tm_lten10 = {tm_ltens, 3'b0} + {2'b0, tm_ltens, 1'b0};
+        tm_lones7 = tm_lo - tm_lten10;
+        tm_htens_r <= tm_htens;
+        tm_hones_r <= tm_hones7[3:0];
+        tm_ltens_r <= tm_ltens;
+        tm_lones_r <= tm_lones7[3:0];
+
+        fuel_px = (fuel_ms >= FUEL_MAX_MS[14:0]) ? FUEL_INNER_H[14:0] :
+                  (fuel_ms / FUEL_MS_PER_PX[14:0]);
+        fuel_fill_h_r <= (fuel_px > FUEL_INNER_H[14:0]) ?
+                         FUEL_INNER_H[9:0] : fuel_px[9:0];
+    end
 end
 
 wire signed [15:0] sdx_d = $signed({6'b0, pix_x_d}) - 16'sd400;
 wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
-wire in_sun = in_fb_d && !black_hole && (srr_d <= (SUN_R * SUN_R));
-wire in_bh  = in_fb_d && black_hole && (srr_d <= (SUN_R * SUN_R));
+wire in_sun = in_fb_d && !black_hole_r && (srr_d <= (SUN_R * SUN_R));
+wire in_bh  = in_fb_d && black_hole_r && (srr_d <= (SUN_R * SUN_R));
 wire star_hit = star_rom_hit(pix_x_d, pix_y_d);
 
-wire [9:0] score0_abs = score0[9] ? (-score0) : score0;
-wire [9:0] score1_abs = score1[9] ? (-score1) : score1;
-wire [3:0] s0_hund = dec_hundreds(score0_abs);
-wire [3:0] s1_hund = dec_hundreds(score1_abs);
-wire [9:0] s0_rem  = score0_abs - ({6'b0, s0_hund} * 10'd100);
-wire [9:0] s1_rem  = score1_abs - ({6'b0, s1_hund} * 10'd100);
-wire [3:0] s0_tens = dec_tens(s0_rem[6:0]);
-wire [3:0] s1_tens = dec_tens(s1_rem[6:0]);
-wire [6:0] s0_ten10 = {s0_tens, 3'b0} + {2'b0, s0_tens, 1'b0};
-wire [6:0] s1_ten10 = {s1_tens, 3'b0} + {2'b0, s1_tens, 1'b0};
-wire [6:0] s0_ones7 = s0_rem[6:0] - s0_ten10;
-wire [6:0] s1_ones7 = s1_rem[6:0] - s1_ten10;
-wire [3:0] s0_ones = s0_ones7[3:0];
-wire [3:0] s1_ones = s1_ones7[3:0];
-// Leading-zero blanking; minus sits immediately left of first visible digit
-wire s0_show_h = (score0_abs >= 10'd100);
-wire s0_show_t = (score0_abs >= 10'd10);
-wire s1_show_h = (score1_abs >= 10'd100);
-wire s1_show_t = (score1_abs >= 10'd10);
+localparam integer TM_X0 = 320;
 wire [9:0] s0_hx = 10'd52;
 wire [9:0] s0_tx = 10'd92;
 wire [9:0] s0_ox = 10'd132;
 wire [9:0] s1_hx = 10'd616;
 wire [9:0] s1_tx = 10'd656;
 wire [9:0] s1_ox = 10'd696;
-wire [9:0] s0_first = s0_show_h ? s0_hx : (s0_show_t ? s0_tx : s0_ox);
-wire [9:0] s1_first = s1_show_h ? s1_hx : (s1_show_t ? s1_tx : s1_ox);
-wire [9:0] s0_minus_x = s0_first - DIG_W[9:0];
-wire [9:0] s1_minus_x = s1_first - DIG_W[9:0];
-// Counter 00:00..99:99 (hi/lo each 0..99), not a clock
-wire [13:0] tm_hi14 = timer_sec / 14'd100;
-wire [13:0] tm_lo14 = timer_sec % 14'd100;
-wire [6:0]  tm_hi   = tm_hi14[6:0];
-wire [6:0]  tm_lo   = tm_lo14[6:0];
-wire [3:0]  tm_htens = dec_tens(tm_hi);
-wire [6:0]  tm_hten10 = {tm_htens, 3'b0} + {2'b0, tm_htens, 1'b0};
-wire [6:0]  tm_hones7 = tm_hi - tm_hten10;
-wire [3:0]  tm_hones = tm_hones7[3:0];
-wire [3:0]  tm_ltens = dec_tens(tm_lo);
-wire [6:0]  tm_lten10 = {tm_ltens, 3'b0} + {2'b0, tm_ltens, 1'b0};
-wire [6:0]  tm_lones7 = tm_lo - tm_lten10;
-wire [3:0]  tm_lones = tm_lones7[3:0];
-// DIG_W=32, pitch 40; colon 8 wide → block 160 px, centered on 800
-localparam integer TM_X0 = 320;
+
 wire timer_hit =
-    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0],           10'd18, tm_htens, 2'd0) ||
-    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd40,   10'd18, tm_hones, 2'd0) ||
-    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd76,   10'd18, 4'd0,     2'd2) ||
-    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd88,   10'd18, tm_ltens, 2'd0) ||
-    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd128,  10'd18, tm_lones, 2'd0);
+    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0],           10'd18, tm_htens_r, 2'd0) ||
+    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd40,   10'd18, tm_hones_r, 2'd0) ||
+    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd76,   10'd18, 4'd0,       2'd2) ||
+    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd88,   10'd18, tm_ltens_r, 2'd0) ||
+    hud_mark(pix_x_d, pix_y_d, TM_X0[9:0] + 10'd128,  10'd18, tm_lones_r, 2'd0);
 wire score_hit =
-    (score0[9] && hud_mark(pix_x_d, pix_y_d, s0_minus_x, 10'd18, 4'd0, 2'd1)) ||
-    (s0_show_h && hud_mark(pix_x_d, pix_y_d, s0_hx, 10'd18, s0_hund, 2'd0)) ||
-    (s0_show_t && hud_mark(pix_x_d, pix_y_d, s0_tx, 10'd18, s0_tens, 2'd0)) ||
-    hud_mark(pix_x_d, pix_y_d, s0_ox, 10'd18, s0_ones, 2'd0) ||
-    (score1[9] && hud_mark(pix_x_d, pix_y_d, s1_minus_x, 10'd18, 4'd0, 2'd1)) ||
-    (s1_show_h && hud_mark(pix_x_d, pix_y_d, s1_hx, 10'd18, s1_hund, 2'd0)) ||
-    (s1_show_t && hud_mark(pix_x_d, pix_y_d, s1_tx, 10'd18, s1_tens, 2'd0)) ||
-    hud_mark(pix_x_d, pix_y_d, s1_ox, 10'd18, s1_ones, 2'd0);
+    (s0_neg_r && hud_mark(pix_x_d, pix_y_d, s0_minus_x_r, 10'd18, 4'd0, 2'd1)) ||
+    (s0_show_h_r && hud_mark(pix_x_d, pix_y_d, s0_hx, 10'd18, s0_hund_r, 2'd0)) ||
+    (s0_show_t_r && hud_mark(pix_x_d, pix_y_d, s0_tx, 10'd18, s0_tens_r, 2'd0)) ||
+    hud_mark(pix_x_d, pix_y_d, s0_ox, 10'd18, s0_ones_r, 2'd0) ||
+    (s1_neg_r && hud_mark(pix_x_d, pix_y_d, s1_minus_x_r, 10'd18, 4'd0, 2'd1)) ||
+    (s1_show_h_r && hud_mark(pix_x_d, pix_y_d, s1_hx, 10'd18, s1_hund_r, 2'd0)) ||
+    (s1_show_t_r && hud_mark(pix_x_d, pix_y_d, s1_tx, 10'd18, s1_tens_r, 2'd0)) ||
+    hud_mark(pix_x_d, pix_y_d, s1_ox, 10'd18, s1_ones_r, 2'd0);
 wire lives0_hit =
-    ((lives0 > 3'd0) && life_icon(pix_x_d, pix_y_d, 10'd92,  10'd82)) ||
-    ((lives0 > 3'd1) && life_icon(pix_x_d, pix_y_d, 10'd110, 10'd82)) ||
-    ((lives0 > 3'd2) && life_icon(pix_x_d, pix_y_d, 10'd128, 10'd82)) ||
-    ((lives0 > 3'd3) && life_icon(pix_x_d, pix_y_d, 10'd146, 10'd82)) ||
-    ((lives0 > 3'd4) && life_icon(pix_x_d, pix_y_d, 10'd164, 10'd82));
-wire [14:0] fuel_px =
-    (fuel_ms >= FUEL_MAX_MS[14:0]) ? FUEL_INNER_H[14:0] :
-    (fuel_ms / FUEL_MS_PER_PX[14:0]);
-wire [9:0] fuel_fill_h =
-    (fuel_px > FUEL_INNER_H[14:0]) ? FUEL_INNER_H[9:0] : fuel_px[9:0];
-wire fuel_hit = fuel_gauge(pix_x_d, pix_y_d, fuel_fill_h);
-wire go_flash = (frame_cnt < 6'd13) ||
-                ((frame_cnt >= 6'd25) && (frame_cnt < 6'd38));
-wire go_hit   = game_over && go_flash && game_over_text(pix_x_d, pix_y_d);
+    ((lives0_r > 3'd0) && life_icon(pix_x_d, pix_y_d, 10'd92,  10'd82)) ||
+    ((lives0_r > 3'd1) && life_icon(pix_x_d, pix_y_d, 10'd110, 10'd82)) ||
+    ((lives0_r > 3'd2) && life_icon(pix_x_d, pix_y_d, 10'd128, 10'd82)) ||
+    ((lives0_r > 3'd3) && life_icon(pix_x_d, pix_y_d, 10'd146, 10'd82)) ||
+    ((lives0_r > 3'd4) && life_icon(pix_x_d, pix_y_d, 10'd164, 10'd82));
+wire fuel_hit = fuel_gauge(pix_x_d, pix_y_d, fuel_fill_h_r);
+wire go_hit   = game_over && go_flash_r && game_over_text(pix_x_d, pix_y_d);
+wire pf_hit   = (game_over || await_start) && push_fire_text(pix_x_d, pix_y_d);
 
 always @(posedge clk) begin
     if (in_fb_d && go_hit) begin
         pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00;
+    end else if (in_fb_d && pf_hit) begin
+        pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // bright green
     end else if (in_sun) begin
         if (srr_d < 32'sd80) begin
             pix_r <= 5'h1F; pix_g <= 6'h30; pix_b <= 5'h04;
@@ -419,24 +544,32 @@ always @(posedge clk) begin
         pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else if (in_fb_d && (rdata != COL_OFF)) begin
         if (rdata == COL_PL) begin
-            pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // Enterprise green
+            if (pl_hs_flash_r) begin
+                if (pl_flash_red_r) begin
+                    pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00; // HS red
+                end else begin
+                    pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // HS green
+                end
+            end else begin
+                pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // Diamond green
+            end
         end else if (rdata == COL_AI) begin
             pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h00; // AI bright yellow
         end else begin
             pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // shots white
         end
     end else if (in_fb_d && timer_hit) begin
-        if (timer_sec < 14'd10) begin
+        if (timer_sec_r < 14'd10) begin
             pix_r <= 5'h19; pix_g <= 6'h00; pix_b <= 5'h00;
-        end else if (timer_sec < 14'd30) begin
+        end else if (timer_sec_r < 14'd30) begin
             pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h00;
         end else begin
             pix_r <= 5'h19; pix_g <= 6'h32; pix_b <= 5'h19;
         end
     end else if (in_fb_d && fuel_hit) begin
-        if (fuel_ms <= FUEL_RED_MS[14:0]) begin
+        if (fuel_ms_r <= FUEL_RED_MS[14:0]) begin
             pix_r <= 5'h1F; pix_g <= 6'h00; pix_b <= 5'h00;
-        end else if (fuel_ms <= FUEL_YEL_MS[14:0]) begin
+        end else if (fuel_ms_r <= FUEL_YEL_MS[14:0]) begin
             pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h00;
         end else begin
             pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00;

@@ -10,6 +10,7 @@
         <File path="src/sin_cos.v" type="file.verilog" enable="1"/>
         <File path="src/fb_ram.v" type="file.verilog" enable="1"/>
         <File path="src/space_wars.v" type="file.verilog" enable="1"/>
+        <File path="src/sw_config.vh" type="file.verilog" enable="1"/>
         <File path="src/sw_physics.v" type="file.verilog" enable="1"/>
         <File path="src/sw_draw.v" type="file.verilog" enable="1"/>
         <File path="src/sw_scanout.v" type="file.verilog" enable="1"/>
