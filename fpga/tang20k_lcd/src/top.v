@@ -1,12 +1,13 @@
-// Tang Primer 20K Dock + 5" LCD — Space Wars–style (sun + gravity + thrust)
+// Tang Primer 20K Dock + 5" LCD -- Space Wars-style (sun + gravity + thrust)
 //
 // DIP switch 1 down. Controls (active-low):
-//   S1 left | S2 right | S3 thrust | S4 fire | S0 reset
-//   Needle = you; wedge = AI
+//   S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace
+//   Diamond = you; wedge = AI
+//   Reset = PLL lock only (S0 is NOT board reset)
 
 module top (
     input  wire       sys_clk,
-    input  wire       sys_rst_n,
+    input  wire       btn_hyper_n,
     input  wire       btn_left_n,
     input  wire       btn_right_n,
     input  wire       btn_thrust_n,
@@ -23,7 +24,7 @@ module top (
 
 wire clk_pix;
 wire pll_lock;
-wire rst_n = sys_rst_n & pll_lock;
+wire rst_n = pll_lock;
 
 wire [4:0] pix_r;
 wire [5:0] pix_g;
@@ -70,6 +71,7 @@ space_wars u_game (
     .btn_right_n(btn_right_n),
     .btn_thrust_n(btn_thrust_n),
     .btn_fire_n(btn_fire_n),
+    .btn_hyper_n(btn_hyper_n),
     .pix_x(pix_x),
     .pix_y(pix_y),
     .de_now(de_now),

@@ -1,6 +1,6 @@
 // Space Wars framebuffer draw engine (Tang Primer 20K).
 // CLEAR / ERASE / XFORM / SHIP / FLAME / DONE / SHOT / BOOM.
-// No FB star wipe — after erase or clear, route straight to XFORM/SHOT.
+// No FB star wipe -- after erase or clear, route straight to XFORM/SHOT.
 
 module sw_draw (
     input  wire               clk,
@@ -47,11 +47,11 @@ module sw_draw (
     output reg         [18:0] clear_addr
 );
 
-// Gowin Education often fails `include — keep constants/helpers local.
+// Gowin Education often fails include of .vh -- keep constants/helpers local.
 localparam integer FB_W   = 800;
 localparam integer FB_H   = 470;
 localparam integer FB_SZ  = FB_W * FB_H;
-localparam integer MAXV     = 21;
+localparam integer MAXV     = 12;
 localparam integer NSHOT    = 8;
 
 localparam [1:0] COL_OFF  = 2'b00;
@@ -108,6 +108,16 @@ reg               shot_phase; // 0=erase, 1=draw
 reg [4:0]  boom0_len_prev, boom_len_prev;
 reg        boom_sel;
 
+// Snapshot at draw_go -- physics must not change these mid-erase/redraw
+reg signed [23:0] d_pos0_x, d_pos0_y, d_pos1_x, d_pos1_y;
+reg               d_thrust0, d_thrust1;
+reg        [7:0]  d_shot_on;
+reg       [191:0] d_shot_x, d_shot_y;
+reg       [127:0] d_shot_vx, d_shot_vy;
+reg        [4:0]  d_boom0, d_boom1;
+reg signed [15:0] d_boom0_x, d_boom0_y, d_boom_x, d_boom_y;
+reg               d_boom0_dirty, d_boom_dirty;
+
 reg [4:0]  vi;
 reg [4:0]  ei;
 reg [4:0]  si;
@@ -116,14 +126,15 @@ reg [4:0]  nedge;
 reg [4:0]  hitch;
 
 reg signed [15:0] b_x, b_y, b_dx, b_dy, b_sx, b_sy, b_err, end_x, end_y;
+reg        [12:0] line_steps; // abort runaway lines (wrap / bad verts)
 reg               line_active;
 
-wire signed [15:0] boom_cx   = boom_sel ? boom_x : boom0_x;
-wire signed [15:0] boom_cy   = boom_sel ? boom_y : boom0_y;
+wire signed [15:0] boom_cx   = boom_sel ? d_boom_x : d_boom0_x;
+wire signed [15:0] boom_cy   = boom_sel ? d_boom_y : d_boom0_y;
 wire        [4:0]  boom_clen = boom_sel ? boom_len_prev : boom0_len_prev;
-wire        [4:0]  boom_cnt  = boom_sel ? boom1 : boom0;
+wire        [4:0]  boom_cnt  = boom_sel ? d_boom1 : d_boom0;
 
-// Packed shot buses → per-index locals (combinational mux)
+// Packed shot buses -> per-index locals (combinational mux)
 reg               shot_on_i;
 reg signed [23:0] shot_x_i, shot_y_i;
 reg signed [15:0] shot_vx_i, shot_vy_i;
@@ -131,93 +142,82 @@ reg signed [15:0] shot_vx_i, shot_vy_i;
 always @(*) begin
     case (si[2:0])
         3'd0: begin
-            shot_on_i = shot_on[0];
-            shot_x_i  = shot_x[23:0];
-            shot_y_i  = shot_y[23:0];
-            shot_vx_i = shot_vx[15:0];
-            shot_vy_i = shot_vy[15:0];
+            shot_on_i = d_shot_on[0];
+            shot_x_i  = d_shot_x[23:0];
+            shot_y_i  = d_shot_y[23:0];
+            shot_vx_i = d_shot_vx[15:0];
+            shot_vy_i = d_shot_vy[15:0];
         end
         3'd1: begin
-            shot_on_i = shot_on[1];
-            shot_x_i  = shot_x[47:24];
-            shot_y_i  = shot_y[47:24];
-            shot_vx_i = shot_vx[31:16];
-            shot_vy_i = shot_vy[31:16];
+            shot_on_i = d_shot_on[1];
+            shot_x_i  = d_shot_x[47:24];
+            shot_y_i  = d_shot_y[47:24];
+            shot_vx_i = d_shot_vx[31:16];
+            shot_vy_i = d_shot_vy[31:16];
         end
         3'd2: begin
-            shot_on_i = shot_on[2];
-            shot_x_i  = shot_x[71:48];
-            shot_y_i  = shot_y[71:48];
-            shot_vx_i = shot_vx[47:32];
-            shot_vy_i = shot_vy[47:32];
+            shot_on_i = d_shot_on[2];
+            shot_x_i  = d_shot_x[71:48];
+            shot_y_i  = d_shot_y[71:48];
+            shot_vx_i = d_shot_vx[47:32];
+            shot_vy_i = d_shot_vy[47:32];
         end
         3'd3: begin
-            shot_on_i = shot_on[3];
-            shot_x_i  = shot_x[95:72];
-            shot_y_i  = shot_y[95:72];
-            shot_vx_i = shot_vx[63:48];
-            shot_vy_i = shot_vy[63:48];
+            shot_on_i = d_shot_on[3];
+            shot_x_i  = d_shot_x[95:72];
+            shot_y_i  = d_shot_y[95:72];
+            shot_vx_i = d_shot_vx[63:48];
+            shot_vy_i = d_shot_vy[63:48];
         end
         3'd4: begin
-            shot_on_i = shot_on[4];
-            shot_x_i  = shot_x[119:96];
-            shot_y_i  = shot_y[119:96];
-            shot_vx_i = shot_vx[79:64];
-            shot_vy_i = shot_vy[79:64];
+            shot_on_i = d_shot_on[4];
+            shot_x_i  = d_shot_x[119:96];
+            shot_y_i  = d_shot_y[119:96];
+            shot_vx_i = d_shot_vx[79:64];
+            shot_vy_i = d_shot_vy[79:64];
         end
         3'd5: begin
-            shot_on_i = shot_on[5];
-            shot_x_i  = shot_x[143:120];
-            shot_y_i  = shot_y[143:120];
-            shot_vx_i = shot_vx[95:80];
-            shot_vy_i = shot_vy[95:80];
+            shot_on_i = d_shot_on[5];
+            shot_x_i  = d_shot_x[143:120];
+            shot_y_i  = d_shot_y[143:120];
+            shot_vx_i = d_shot_vx[95:80];
+            shot_vy_i = d_shot_vy[95:80];
         end
         3'd6: begin
-            shot_on_i = shot_on[6];
-            shot_x_i  = shot_x[167:144];
-            shot_y_i  = shot_y[167:144];
-            shot_vx_i = shot_vx[111:96];
-            shot_vy_i = shot_vy[111:96];
+            shot_on_i = d_shot_on[6];
+            shot_x_i  = d_shot_x[167:144];
+            shot_y_i  = d_shot_y[167:144];
+            shot_vx_i = d_shot_vx[111:96];
+            shot_vy_i = d_shot_vy[111:96];
         end
         default: begin
-            shot_on_i = shot_on[7];
-            shot_x_i  = shot_x[191:168];
-            shot_y_i  = shot_y[191:168];
-            shot_vx_i = shot_vx[127:112];
-            shot_vy_i = shot_vy[127:112];
+            shot_on_i = d_shot_on[7];
+            shot_x_i  = d_shot_x[191:168];
+            shot_y_i  = d_shot_y[191:168];
+            shot_vx_i = d_shot_vx[127:112];
+            shot_vy_i = d_shot_vy[127:112];
         end
     endcase
 end
 
-// ang0/ang1 unused here — glue selects angle with sc_sel for external sin_cos.
+// ang0/ang1 unused here -- glue selects angle with sc_sel for external sin_cos.
 
-// Player: clean top-down TOS (saucer, neck, hull, two nacelles). Nose = +X.
-// Wedge: JS 4-point. kind 0=player, 1=AI
+// Player: Diamond outline (Pass A slim). Nose = +X.
+// Wedge: JS 4-point. kind 0=player (Diamond), 1=AI
 function signed [7:0] shp_x;
     input        kind;
     input [4:0]  i;
     begin
         if (!kind) begin
             case (i)
-                5'd0:  shp_x =  8'sd16;
-                5'd1:  shp_x =  8'sd10;
-                5'd2:  shp_x =  8'sd3;
-                5'd3:  shp_x =  8'sd0;
-                5'd4:  shp_x =  8'sd3;
-                5'd5:  shp_x =  8'sd10;
-                5'd6:  shp_x = -8'sd4;
-                5'd7:  shp_x = -8'sd4;
-                5'd8:  shp_x = -8'sd12;
-                5'd9:  shp_x = -8'sd12;
-                5'd10: shp_x = -8'sd3;
-                5'd11: shp_x = -8'sd15;
-                5'd12: shp_x = -8'sd15;
-                5'd13: shp_x =  8'sd2;
-                5'd14: shp_x = -8'sd3;
-                5'd15: shp_x = -8'sd15;
-                5'd16: shp_x = -8'sd15;
-                5'd17: shp_x =  8'sd2;
-                5'd18: shp_x = -8'sd12;
+                5'd0:  shp_x =  8'sd14; // nose
+                5'd1:  shp_x =  8'sd4;  // diamond R
+                5'd2:  shp_x = -8'sd2;  // neck R
+                5'd3:  shp_x = -8'sd14; // nacelle R tip
+                5'd4:  shp_x = -8'sd10; // aft / hitch
+                5'd5:  shp_x = -8'sd14; // nacelle L tip
+                5'd6:  shp_x = -8'sd2;  // neck L
+                5'd7:  shp_x =  8'sd4;  // diamond L
                 default: shp_x = 8'sd0;
             endcase
         end else begin
@@ -239,24 +239,13 @@ function signed [7:0] shp_y;
         if (!kind) begin
             case (i)
                 5'd0:  shp_y =  8'sd0;
-                5'd1:  shp_y =  8'sd8;
-                5'd2:  shp_y =  8'sd8;
-                5'd3:  shp_y =  8'sd0;
-                5'd4:  shp_y = -8'sd8;
+                5'd1:  shp_y =  8'sd7;
+                5'd2:  shp_y =  8'sd3;
+                5'd3:  shp_y =  8'sd8;
+                5'd4:  shp_y =  8'sd0;
                 5'd5:  shp_y = -8'sd8;
-                5'd6:  shp_y =  8'sd2;
-                5'd7:  shp_y = -8'sd2;
-                5'd8:  shp_y =  8'sd3;
-                5'd9:  shp_y = -8'sd3;
-                5'd10: shp_y =  8'sd6;
-                5'd11: shp_y =  8'sd6;
-                5'd12: shp_y =  8'sd8;
-                5'd13: shp_y =  8'sd8;
-                5'd14: shp_y = -8'sd6;
-                5'd15: shp_y = -8'sd6;
-                5'd16: shp_y = -8'sd8;
-                5'd17: shp_y = -8'sd8;
-                5'd18: shp_y =  8'sd0;
+                5'd6:  shp_y = -8'sd3;
+                5'd7:  shp_y = -8'sd7;
                 default: shp_y = 8'sd0;
             endcase
         end else begin
@@ -279,12 +268,8 @@ function [4:0] edge_a;
             case (e)
                 5'd0:  edge_a=5'd0;  5'd1:  edge_a=5'd1;  5'd2:  edge_a=5'd2;
                 5'd3:  edge_a=5'd3;  5'd4:  edge_a=5'd4;  5'd5:  edge_a=5'd5;
-                5'd6:  edge_a=5'd3;  5'd7:  edge_a=5'd3;  5'd8:  edge_a=5'd6;
-                5'd9:  edge_a=5'd6;  5'd10: edge_a=5'd7;  5'd11: edge_a=5'd8;
-                5'd12: edge_a=5'd8;  5'd13: edge_a=5'd10; 5'd14: edge_a=5'd11;
-                5'd15: edge_a=5'd12; 5'd16: edge_a=5'd13;
-                5'd17: edge_a=5'd9;  5'd18: edge_a=5'd14; 5'd19: edge_a=5'd15;
-                5'd20: edge_a=5'd16; 5'd21: edge_a=5'd17;
+                5'd6:  edge_a=5'd6;  5'd7:  edge_a=5'd7;
+                5'd8:  edge_a=5'd2;  5'd9:  edge_a=5'd6; // pylons to aft
                 default: edge_a=5'd0;
             endcase
         end else begin
@@ -304,13 +289,9 @@ function [4:0] edge_b;
         if (!kind) begin
             case (e)
                 5'd0:  edge_b=5'd1;  5'd1:  edge_b=5'd2;  5'd2:  edge_b=5'd3;
-                5'd3:  edge_b=5'd4;  5'd4:  edge_b=5'd5;  5'd5:  edge_b=5'd0;
-                5'd6:  edge_b=5'd6;  5'd7:  edge_b=5'd7;  5'd8:  edge_b=5'd7;
-                5'd9:  edge_b=5'd8;  5'd10: edge_b=5'd9;  5'd11: edge_b=5'd9;
-                5'd12: edge_b=5'd10; 5'd13: edge_b=5'd11; 5'd14: edge_b=5'd12;
-                5'd15: edge_b=5'd13; 5'd16: edge_b=5'd10;
-                5'd17: edge_b=5'd14; 5'd18: edge_b=5'd15; 5'd19: edge_b=5'd16;
-                5'd20: edge_b=5'd17; 5'd21: edge_b=5'd14;
+                5'd3:  edge_b=5'd4;  5'd4:  edge_b=5'd5;  5'd5:  edge_b=5'd6;
+                5'd6:  edge_b=5'd7;  5'd7:  edge_b=5'd0;
+                5'd8:  edge_b=5'd4;  5'd9:  edge_b=5'd4;
                 default: edge_b=5'd0;
             endcase
         end else begin
@@ -333,6 +314,7 @@ task start_line;
         b_sy  <= (y0 < y1i) ? 16'sd1 : -16'sd1;
         b_err <= abs16(x1i - x0) - abs16(y1i - y0);
         b_x   <= x0; b_y <= y0;
+        line_steps <= 13'd0;
     end
 endtask
 
@@ -340,12 +322,15 @@ task step_bresenham;
     begin
         if ((b_x == end_x) && (b_y == end_y))
             line_active <= 1'b0;
+        else if (line_steps >= 13'd4095)
+            line_active <= 1'b0; // hard stop -- prevents FB lockup
         else begin : bstep
             reg signed [15:0] e2, nerr, nx, ny;
             e2 = b_err <<< 1; nerr = b_err; nx = b_x; ny = b_y;
             if (e2 > -b_dy) begin nerr = nerr - b_dy; nx = nx + b_sx; end
             if (e2 <  b_dx) begin nerr = nerr + b_dx; ny = ny + b_sy; end
             b_err <= nerr; b_x <= nx; b_y <= ny;
+            line_steps <= line_steps + 13'd1;
         end
     end
 endtask
@@ -353,20 +338,22 @@ endtask
 task load_ship_geom;
     input kind;
     begin
-        if (!kind) begin nvert = 5'd19; nedge = 5'd22; hitch = 5'd18; end
+        if (!kind) begin nvert = 5'd8; nedge = 5'd10; hitch = 5'd4; end
         else       begin nvert = 5'd4;  nedge = 5'd4;  hitch = 5'd2; end
     end
 endtask
 
-// After CLEAR or ERASE (replaces former ST_STARS routing)
+// After CLEAR or ERASE. Boom retired -- hide ships parked off-screen.
 task route_draw;
     begin
         vi <= 5'd0;
         si <= 5'd0;
         shot_phase <= 1'b0;
         line_active <= 1'b0;
-        if ((boom0 != 5'd0) || boom0_dirty) begin
-            if ((boom1 != 5'd0) || boom_dirty) begin
+        if (d_pos0_x[23]) begin
+            have_prev0 <= 1'b0;
+            if (d_pos1_x[23]) begin
+                have_prev1 <= 1'b0;
                 ei    <= 5'd0;
                 state <= ST_SHOT;
             end else begin
@@ -380,9 +367,9 @@ task route_draw;
         end else begin
             ship_sel <= 1'b0;
             sc_sel   <= 1'b0;
-            nvert    <= 5'd19;
-            nedge    <= 5'd22;
-            hitch    <= 5'd18;
+            nvert    <= 5'd8;
+            nedge    <= 5'd10;
+            hitch    <= 5'd4;
             state    <= ST_XFORM;
         end
     end
@@ -417,7 +404,7 @@ always @(posedge clk or negedge rst_n) begin
         ship_sel         <= 1'b0;
         sc_sel           <= 1'b0;
         vi <= 5'd0; ei <= 5'd0; si <= 5'd0;
-        nvert <= 5'd19; nedge <= 5'd22; hitch <= 5'd18;
+        nvert <= 5'd8; nedge <= 5'd10; hitch <= 5'd4;
         shot_phase       <= 1'b0;
         boom0_len_prev   <= 5'd0;
         boom_len_prev    <= 5'd0;
@@ -448,6 +435,29 @@ always @(posedge clk or negedge rst_n) begin
             ST_IDLE: begin
                 busy <= 1'b0;
                 if (draw_go) begin
+                    // Freeze live physics inputs for this whole erase/redraw pass
+                    d_pos0_x      <= pos0_x;
+                    d_pos0_y      <= pos0_y;
+                    d_pos1_x      <= pos1_x;
+                    d_pos1_y      <= pos1_y;
+                    d_thrust0     <= thrusting0;
+                    d_thrust1     <= thrusting1;
+                    d_shot_on     <= shot_on;
+                    d_shot_x      <= shot_x;
+                    d_shot_y      <= shot_y;
+                    d_shot_vx     <= shot_vx;
+                    d_shot_vy     <= shot_vy;
+                    // Boom retired -- keep latches cleared
+                    d_boom0       <= 5'd0;
+                    d_boom1       <= 5'd0;
+                    d_boom0_x     <= 16'sd0;
+                    d_boom0_y     <= 16'sd0;
+                    d_boom_x      <= 16'sd0;
+                    d_boom_y      <= 16'sd0;
+                    d_boom0_dirty <= 1'b0;
+                    d_boom_dirty  <= 1'b0;
+                    clr_boom0_dirty <= 1'b1;
+                    clr_boom1_dirty <= 1'b1;
                     busy        <= 1'b1;
                     line_active <= 1'b0;
                     plot_col    <= COL_OFF;
@@ -475,9 +485,9 @@ always @(posedge clk or negedge rst_n) begin
                 if (!line_active) begin
                     if (ei == 5'd0) begin
                         load_ship_geom(ship_sel);
-                        nvert <= (!ship_sel) ? 5'd19 : 5'd4;
-                        nedge <= (!ship_sel) ? 5'd22 : 5'd4;
-                        hitch <= (!ship_sel) ? 5'd18 : 5'd2;
+                        nvert <= (!ship_sel) ? 5'd8 : 5'd4;
+                        nedge <= (!ship_sel) ? 5'd10 : 5'd4;
+                        hitch <= (!ship_sel) ? 5'd4 : 5'd2;
                         ei <= 5'd1;
                     end else if ((ei - 5'd1) >= nedge) begin
                         if ((ship_sel ? prev_thrust1 : prev_thrust0)) begin
@@ -530,8 +540,8 @@ always @(posedge clk or negedge rst_n) begin
                     ty = shp_y(ship_sel, vi);
                     lx = {{8{tx[7]}}, tx};
                     ly = {{8{ty[7]}}, ty};
-                    px = ship_sel ? pos1_x : pos0_x;
-                    py = ship_sel ? pos1_y : pos0_y;
+                    px = ship_sel ? d_pos1_x : d_pos0_x;
+                    py = ship_sel ? d_pos1_y : d_pos0_y;
                     sxv[vi] <= $signed(px[23:8]) + mul_q88(lx, cos_a) - mul_q88(ly, sin_a);
                     syv[vi] <= $signed(py[23:8]) + mul_q88(lx, sin_a) + mul_q88(ly, cos_a);
                 end
@@ -546,7 +556,7 @@ always @(posedge clk or negedge rst_n) begin
             ST_SHIP: begin
                 if (!line_active) begin
                     if (ei >= nedge) begin
-                        if (ship_sel ? thrusting1 : thrusting0) begin
+                        if (ship_sel ? d_thrust1 : d_thrust0) begin
                             line_active <= 1'b0;
                             state <= ST_FLAME;
                         end else begin
@@ -601,6 +611,10 @@ always @(posedge clk or negedge rst_n) begin
                         line_active <= 1'b0;
                         vi <= 5'd0;
                         state <= ST_DONE;
+                    end else if (line_steps >= 13'd4094) begin
+                        line_active <= 1'b0;
+                        vi <= 5'd0;
+                        state <= ST_DONE;
                     end else
                         step_bresenham;
                 end
@@ -618,10 +632,11 @@ always @(posedge clk or negedge rst_n) begin
                     vi <= vi + 5'd1;
                 end else if (!ship_sel) begin
                     have_prev0   <= 1'b1;
-                    prev_thrust0 <= thrusting0;
+                    prev_thrust0 <= d_thrust0;
                     vi           <= 5'd0;
                     ei           <= 5'd0;
-                    if ((boom1 != 5'd0) || boom_dirty) begin
+                    if (d_pos1_x[23]) begin
+                        have_prev1 <= 1'b0;
                         si         <= 5'd0;
                         shot_phase <= 1'b0;
                         state      <= ST_SHOT;
@@ -635,7 +650,7 @@ always @(posedge clk or negedge rst_n) begin
                     end
                 end else begin
                     have_prev1   <= 1'b1;
-                    prev_thrust1 <= thrusting1;
+                    prev_thrust1 <= d_thrust1;
                     ship_sel     <= 1'b0;
                     sc_sel       <= 1'b0;
                     vi           <= 5'd0;
@@ -651,11 +666,7 @@ always @(posedge clk or negedge rst_n) begin
                 if (!line_active) begin
                     if (si >= 5'd8) begin
                         ei <= 5'd0;
-                        if ((boom0 != 5'd0) || boom0_dirty || (boom1 != 5'd0) || boom_dirty) begin
-                            boom_sel <= ((boom0 != 5'd0) || boom0_dirty) ? 1'b0 : 1'b1;
-                            state    <= ST_BOOM;
-                        end else
-                            go_idle_done;
+                        go_idle_done;
                     end else if (shot_phase == 1'b0) begin
                         if (shot_have_prev[si[2:0]]) begin
                             start_line($signed({6'b0, shot_ox[si[2:0]]}),
@@ -701,80 +712,9 @@ always @(posedge clk or negedge rst_n) begin
                 end
             end
 
-            // Expanding X burst (boom_sel 0=player, 1=AI)
+            // Boom retired -- if entered, exit immediately
             ST_BOOM: begin
-                if (!line_active) begin
-                    if (ei == 5'd0) begin
-                        if (boom_clen != 5'd0) begin
-                            start_line(boom_cx - {11'b0, boom_clen},
-                                       boom_cy - {11'b0, boom_clen},
-                                       boom_cx + {11'b0, boom_clen},
-                                       boom_cy + {11'b0, boom_clen});
-                            line_active <= 1'b1;
-                            plot_col    <= COL_OFF;
-                            ei <= 5'd1;
-                        end else
-                            ei <= 5'd2;
-                    end else if (ei == 5'd1) begin
-                        start_line(boom_cx - {11'b0, boom_clen},
-                                   boom_cy + {11'b0, boom_clen},
-                                   boom_cx + {11'b0, boom_clen},
-                                   boom_cy - {11'b0, boom_clen});
-                        line_active <= 1'b1;
-                        plot_col    <= COL_OFF;
-                        ei <= 5'd2;
-                    end else if (ei == 5'd2) begin
-                        if (boom_cnt == 5'd0) begin
-                            ei <= 5'd4;
-                        end else begin
-                            begin : boomdraw
-                                reg [4:0] L;
-                                L = 5'd19 - boom_cnt;
-                                if (boom_sel)
-                                    boom_len_prev <= L;
-                                else
-                                    boom0_len_prev <= L;
-                                start_line(boom_cx - {11'b0, L},
-                                           boom_cy - {11'b0, L},
-                                           boom_cx + {11'b0, L},
-                                           boom_cy + {11'b0, L});
-                            end
-                            line_active <= 1'b1;
-                            plot_col    <= COL_SHOT;
-                            ei <= 5'd3;
-                        end
-                    end else if (ei == 5'd3) begin
-                        start_line(boom_cx - {11'b0, boom_clen},
-                                   boom_cy + {11'b0, boom_clen},
-                                   boom_cx + {11'b0, boom_clen},
-                                   boom_cy - {11'b0, boom_clen});
-                        line_active <= 1'b1;
-                        plot_col    <= COL_SHOT;
-                        ei <= 5'd4;
-                    end else begin
-                        if (boom_cnt == 5'd0) begin
-                            if (boom_sel) begin
-                                boom_len_prev   <= 5'd0;
-                                clr_boom1_dirty <= 1'b1;
-                            end else begin
-                                boom0_len_prev  <= 5'd0;
-                                clr_boom0_dirty <= 1'b1;
-                            end
-                        end
-                        if (!boom_sel && ((boom1 != 5'd0) || boom_dirty)) begin
-                            boom_sel <= 1'b1;
-                            ei       <= 5'd0;
-                        end else
-                            go_idle_done;
-                    end
-                end else begin
-                    if ((b_x >= 0) && (b_x < FB_W) && (b_y >= 0) && (b_y < FB_H)) begin
-                        plot_en <= 1'b1;
-                        plot_x  <= b_x[9:0];
-                        plot_y  <= b_y[8:0];
-                    end
-                    step_bresenham;
-                end
+                go_idle_done;
             end
 
             default: state <= ST_IDLE;

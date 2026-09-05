@@ -1,11 +1,11 @@
-// Tang Primer 20K Dock (motherboard) — 5" 800x480 RGB LCD
+// Tang Primer 20K Dock (motherboard) -- 5" 800x480 RGB LCD
 
 IO_LOC "sys_clk" H11;
 IO_PORT "sys_clk" IO_TYPE=LVCMOS33 PULL_MODE=UP;
-IO_LOC "sys_rst_n" T10;
-IO_PORT "sys_rst_n" IO_TYPE=LVCMOS33 PULL_MODE=UP;
+IO_LOC "btn_hyper_n" T10;
+IO_PORT "btn_hyper_n" IO_TYPE=LVCMOS33 PULL_MODE=UP;
 
-// Dock keys — 1.5V bank
+// Dock keys -- 1.5V bank
 IO_LOC "btn_left_n" T3;
 IO_PORT "btn_left_n" IO_TYPE=LVCMOS15 PULL_MODE=UP;
 IO_LOC "btn_right_n" T2;
