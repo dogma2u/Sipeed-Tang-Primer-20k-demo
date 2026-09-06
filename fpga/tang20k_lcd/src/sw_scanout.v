@@ -7,6 +7,7 @@ module sw_scanout (
     input  wire [9:0] pix_y,
     input  wire [1:0] rdata,
     input  wire       black_hole,
+    input  wire       green_sun,
     input  wire       game_over,
     input  wire       await_start,
     input  wire [5:0] frame_cnt,
@@ -397,6 +398,7 @@ reg [9:0]  fuel_fill_h_r;
 reg        go_flash_r;
 reg        pl_hs_flash_r, pl_flash_red_r;
 reg        black_hole_r;
+reg        green_sun_r;
 reg [2:0]  lives0_r;
 reg [13:0] timer_sec_r;
 reg [14:0] fuel_ms_r;
@@ -420,6 +422,7 @@ always @(posedge clk) begin
         reg [14:0] fuel_px;
 
         black_hole_r   <= black_hole;
+        green_sun_r    <= green_sun;
         lives0_r       <= lives0;
         timer_sec_r    <= timer_sec;
         fuel_ms_r      <= fuel_ms;
@@ -531,7 +534,16 @@ always @(posedge clk) begin
     end else if (in_fb_d && pf_hit) begin
         pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // bright green
     end else if (in_sun) begin
-        if (srr_d < 32'sd80) begin
+        if (green_sun_r) begin
+            // Secret green sun (unlock via player shots -- not documented in README)
+            if (srr_d < 32'sd80) begin
+                pix_r <= 5'h04; pix_g <= 6'h3F; pix_b <= 5'h04;
+            end else if (srr_d < 32'sd200) begin
+                pix_r <= 5'h02; pix_g <= 6'h30; pix_b <= 5'h02;
+            end else begin
+                pix_r <= 5'h00; pix_g <= 6'h20; pix_b <= 5'h00;
+            end
+        end else if (srr_d < 32'sd80) begin
             pix_r <= 5'h1F; pix_g <= 6'h30; pix_b <= 5'h04;
         end else if (srr_d < 32'sd200) begin
             pix_r <= 5'h1E; pix_g <= 6'h24; pix_b <= 5'h02;

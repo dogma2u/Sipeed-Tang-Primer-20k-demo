@@ -98,8 +98,10 @@
 `define CFG_DEMO_THR_NUM    3
 `define CFG_DEMO_THR_DEN    2
 
-// --- Secret green sun (todo 22; not in README) ---
+// --- Secret green sun (not in README) ---
+// Player shots into sun/BH unlock green; strong grav on AI only (+/- flip).
 `define CFG_GREEN_SUN_HITS      50
 `define CFG_GREEN_SUN_GRAV_MAG  24
+`define CFG_GREEN_SUN_NUM       768
 
 `endif

@@ -1,6 +1,6 @@
 # Sipeed Tang Primer 20K - Space Wars
 
-**Version 1.0.0 - first full release** of the board-tested working game on the Dock + 5" LCD.
+**Version 1.01.1** — working board update (more features still to add).
 
 A **space ship fighting game** on the **Sipeed Tang Primer 20K Dock** with the **5" 800x480 RGB LCD**. You fly the **Diamond**; a yellow AI wedge hunts and shoots. Vector outlines, orange sun (and black hole), bounce walls, scores, fuel, and a countdown. Inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) but this is original HDL - not a ROM dump.
 
@@ -14,7 +14,7 @@ See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 |---|---|
 | Board | Sipeed Tang Primer 20K Dock |
 | FPGA | Gowin GW2A-LV18PG256C8/I7 (GW2A-18C), 46 BSRAM |
-| Display | 5" 800x480 RGB LCD (RGB565, 5 px white border) |
+| Display | 5" 800x480 RGB LCD (RGB565; 5 px black rim, red in black-hole mode) |
 | Clock | 27 MHz on H11 -> rPLL **33 MHz** pixel clock |
 | Tools | Gowin FPGA Designer (synthesize / program) |
 
@@ -45,9 +45,9 @@ Pong-style **block digits** at the top of the LCD: **player left**, **AI right**
 | Your shot destroys the AI | +1 | -- | +5 s |
 | AI shot destroys you | -- | +1 | +5 s |
 | Ships crash into each other | -1 | -1 | -- |
-| Hit the sun / bounce a wall | no score change | no score change | -- |
+| Hit the sun / bounce a wall / wrap edge | no score change | no score change | -- |
 
-A crash also bounces the ships apart so it only counts once. Deaths **vanish** then respawn (AI always; player only if lives remain). Respawn can land anywhere (including on the sun); **1.5 s** invuln after spawn. Sun/BH kills park the ship off-screen briefly, then respawn with **zero velocity**.
+A crash also bounces the ships apart so it only counts once. Deaths **vanish** then respawn (AI always; player only if lives remain). Respawn can land anywhere (including on the sun); **1.5 s** invuln after spawn. Sun/BH kills park the ship off-screen briefly, then respawn with **zero velocity**. Ships and shots **wrap** at the playfield edges; with a **red border** (black hole) ships **bounce** as before (playfield size unchanged). Default rim is **black** (covers the non-play edge).
 
 **Game over.** When the timer reaches **0:00**, or the player has **no lives left**, play freezes and block **GAME OVER** flashes in the center (2 times per second, 50% duty), with **PUSH FIRE TO START** below.
 
@@ -59,7 +59,7 @@ A crash also bounces the ships apart so it only counts once. Deaths **vanish** t
 
 **Framebuffer.** 800x470 **2-bit** BRAM (color at draw: empty / player / AI / shots). Full 800x480x2 overflows the 20K's 46 BSRAM, so the bottom 10 LCD lines stay black. Stars are a tiny coordinate ROM at scanout (in front of ships). A second full playfield page also will not fit (~41 BSRAM each); erase/redraw on one FB, with physics frames dropped while draw is busy. FB writes are FF-pipelined (1 cycle) in `space_wars.v`.
 
-**Sun.** Not stored in the FB. During scanout it is composited as an orange circle at (400, 240), radius 18, **in front of the ships**. Hitting the sun (or black-hole / restored-sun core) **costs the player a life** (vanish path). After **10 shots** hit the sun, it becomes a **black hole** with **1/r^2** gravity (thrust can still fight it) and a **red border**. **5 player shots** into the hole restore the sun with **outward 1/r^2** push.
+**Sun.** Not stored in the FB. During scanout it is composited as an orange circle at (400, 240), radius 18, **in front of the ships**. Hitting the sun (or black-hole / restored-sun core) **costs the player a life** (vanish path). After **10 shots** hit the sun, it becomes a **black hole** with **1/r^2** gravity (thrust can still fight it) and a **red border** (ships bounce). **5 player shots** into the hole restore the sun with **outward 1/r^2** push for **10 s**, then gravity clears and the BH cycle can repeat.
 
 **Ships.** Vertex outlines, `sin_cos.v`, Q8.8 positions. Diamond **green**, AI **bright yellow**, shots white. Mag: **5 shots / ~500 ms**, then **500 ms** reload; one shot per tap. AI bullets live at most **~75%** of player shot life.
 

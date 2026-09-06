@@ -2,6 +2,20 @@
 
 All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
 
+## [1.01.1] - 2026-09-05
+
+Working board update on the way to a fuller 1.01.x (more still to add).
+
+### Added / changed (board-tested)
+- Wrap at playfield edges (default); **black** rim; **red** rim + bounce in black-hole mode
+- BH->sun outward 1/r^2 for `CFG_ANTI_GRAV_SEC`, then clear (soft Fire-start resets sun state)
+- Secret green sun (config knobs only; not described in README)
+- Shot streak erase: clamp endpoints to FB (fixes wrap leftover ink)
+
+### Notes
+- Branch: `savepoint/working-bsram-pre-ddr3`
+- Open / not done yet: config menu UI, test mode, BH border kill + 1/4 maxv, real starfield, etc.
+
 ## [1.0.0] - 2026-09-05
 
 First full release of the board-tested working game (BSRAM playfield).
