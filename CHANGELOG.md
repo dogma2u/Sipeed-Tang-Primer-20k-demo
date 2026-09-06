@@ -2,6 +2,18 @@
 
 All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
 
+## [1.01.3] - 2026-09-05
+
+Board-OK physics updates on `savepoint/working-bsram-pre-ddr3`.
+
+### Added / changed (board-tested)
+- BH red border: max speed 1/4; margin contact kills (invuln still bounces)
+- Attract test mode: hold S0+S1+S2 ~3s (pixel-clk timer); freeze AI; Diamond user control; Fire shoots (does not start match)
+
+### Notes
+- Branch: `savepoint/working-bsram-pre-ddr3`
+- Open: config menu UI, optional AI maxv ramp
+
 ## [1.01.2] - 2026-09-05
 
 Board-OK starfield on `savepoint/working-bsram-pre-ddr3`.

@@ -52,6 +52,8 @@
 `define CFG_AI_VANISH_FR    25
 `define CFG_HS_VANISH_FR    50
 `define CFG_HS_FLASH_FR     75
+// Attract/PUSH FIRE test mode: hold S0+S1+S2 this many pixel-clks (~3s @ 33MHz)
+`define CFG_TEST_HOLD_CLKS  100000000
 
 // --- AI playtime ramps ---
 `define CFG_PLAY_MAX_SEC         300
