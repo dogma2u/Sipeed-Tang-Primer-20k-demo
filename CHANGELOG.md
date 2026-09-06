@@ -2,6 +2,20 @@
 
 All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
 
+## [1.01.2] - 2026-09-05
+
+Board-OK starfield on `savepoint/working-bsram-pre-ddr3`.
+
+### Added / changed (board-tested)
+- Constellation night-sky catalog (`star_field_rom.vh`): 360deg x wrap map, 90deg window
+- Random drift L/R/U/D (diagonals OK) at 1 px/frame; wrap on both axes
+- Stars are scanout overlay under ships/shots
+- Gowin: keep `star_field_rom.vh` on disk for `include` only (not FileList)
+
+### Notes
+- Branch: `savepoint/working-bsram-pre-ddr3`
+- Open: config menu UI, AI maxv ramp, test mode, BH border kill + 1/4 maxv
+
 ## [1.01.1] - 2026-09-05
 
 Working board update on the way to a fuller 1.01.x (more still to add).
@@ -14,7 +28,7 @@ Working board update on the way to a fuller 1.01.x (more still to add).
 
 ### Notes
 - Branch: `savepoint/working-bsram-pre-ddr3`
-- Open / not done yet: config menu UI, test mode, BH border kill + 1/4 maxv, real starfield, etc.
+- Open / not done yet: config menu UI, test mode, BH border kill + 1/4 maxv, etc.
 
 ## [1.0.0] - 2026-09-05
 

@@ -214,6 +214,7 @@ sw_draw u_draw (
 
 sw_scanout u_scan (
     .clk(clk),
+    .frame_start(frame_start),
     .de_now(de_now),
     .pix_x(pix_x),
     .pix_y(pix_y),

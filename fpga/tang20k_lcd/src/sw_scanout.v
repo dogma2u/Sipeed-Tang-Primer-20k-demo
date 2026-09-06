@@ -2,6 +2,7 @@
 
 module sw_scanout (
     input  wire       clk,
+    input  wire       frame_start,
     input  wire       de_now,
     input  wire [9:0] pix_x,
     input  wire [9:0] pix_y,
@@ -27,6 +28,10 @@ module sw_scanout (
 localparam integer FB_W   = 800;
 localparam integer FB_H   = 470;
 localparam integer SUN_R  = 18;
+localparam [11:0] STAR_MAP_W    = 12'd3200;
+localparam [8:0]  STAR_MAP_H    = 9'd470;
+localparam [11:0] STAR_PAN_STEP = 12'd1; // half prior rate (was 2)
+`include "star_field_rom.vh"
 localparam integer FUEL_MAX_MS    = 15000;
 localparam integer FUEL_YEL_MS    = 1500;
 localparam integer FUEL_RED_MS    = 750;
@@ -346,46 +351,26 @@ function push_fire_text;
     end
 endfunction
 
-function star_rom_hit;
-    input [9:0] px, py;
-    begin
-        case ({py[8:0], px})
-            {9'd50,  10'd90}:  star_rom_hit = 1'b1;
-            {9'd60,  10'd130}: star_rom_hit = 1'b1;
-            {9'd55,  10'd170}: star_rom_hit = 1'b1;
-            {9'd70,  10'd210}: star_rom_hit = 1'b1;
-            {9'd100, 10'd230}: star_rom_hit = 1'b1;
-            {9'd110, 10'd270}: star_rom_hit = 1'b1;
-            {9'd95,  10'd300}: star_rom_hit = 1'b1;
-            {9'd40,  10'd520}: star_rom_hit = 1'b1;
-            {9'd70,  10'd560}: star_rom_hit = 1'b1;
-            {9'd45,  10'd600}: star_rom_hit = 1'b1;
-            {9'd75,  10'd640}: star_rom_hit = 1'b1;
-            {9'd50,  10'd680}: star_rom_hit = 1'b1;
-            {9'd360, 10'd100}: star_rom_hit = 1'b1;
-            {9'd350, 10'd180}: star_rom_hit = 1'b1;
-            {9'd390, 10'd130}: star_rom_hit = 1'b1;
-            {9'd395, 10'd150}: star_rom_hit = 1'b1;
-            {9'd400, 10'd170}: star_rom_hit = 1'b1;
-            {9'd440, 10'd110}: star_rom_hit = 1'b1;
-            {9'd445, 10'd190}: star_rom_hit = 1'b1;
-            {9'd400, 10'd650}: star_rom_hit = 1'b1;
-            {9'd420, 10'd680}: star_rom_hit = 1'b1;
-            {9'd400, 10'd710}: star_rom_hit = 1'b1;
-            {9'd440, 10'd690}: star_rom_hit = 1'b1;
-            {9'd380, 10'd720}: star_rom_hit = 1'b1;
-            {9'd160, 10'd720}: star_rom_hit = 1'b1;
-            {9'd130, 10'd700}: star_rom_hit = 1'b1;
-            {9'd130, 10'd740}: star_rom_hit = 1'b1;
-            {9'd100, 10'd760}: star_rom_hit = 1'b1;
-            default: star_rom_hit = 1'b0;
-        endcase
-    end
-endfunction
-
+// Star overlay: 3200x470 map, 90deg window; random L/R/U/D (diagonals OK).
 wire        in_fb = de_now && (pix_x < FB_W) && (pix_y < FB_H);
 reg         in_fb_d;
 reg [9:0]   pix_x_d, pix_y_d;
+reg [11:0]  star_pan_x;
+reg [8:0]   star_pan_y;
+reg [1:0]   star_dx; // 01=+1, 11=-1, 00=0
+reg [1:0]   star_dy;
+reg [15:0]  star_dir_tmr;
+reg [15:0]  star_lfsr;
+
+wire [12:0] star_sum_x = {3'b0, pix_x_d} + {1'b0, star_pan_x};
+wire [11:0] star_mx    = (star_sum_x >= 13'd3200) ?
+                         (star_sum_x[11:0] - 12'd3200) : star_sum_x[11:0];
+wire [10:0] star_sum_y = {1'b0, pix_y_d} + {2'b0, star_pan_y};
+wire [10:0] star_sy1   = (star_sum_y >= 11'd470) ?
+                         (star_sum_y - 11'd470) : star_sum_y;
+wire [8:0]  star_my    = (star_sy1 >= 11'd470) ?
+                         (star_sy1[8:0] - 9'd470) : star_sy1[8:0];
+wire        star_hit   = star_map_hit(star_mx, star_my);
 
 // Latched HUD fields (FF) -- digit/fuel trees run once/clk, not as pixel combo
 reg [3:0]  tm_htens_r, tm_hones_r, tm_ltens_r, tm_lones_r;
@@ -407,6 +392,61 @@ always @(posedge clk) begin
     in_fb_d <= in_fb;
     pix_x_d <= pix_x;
     pix_y_d <= pix_y;
+
+    // Once per FB frame: step pan, maybe pick new direction
+    if (de_now && (pix_x == 10'd799) && (pix_y == 10'd469)) begin
+        // LFSR; force non-zero seed if powered up cleared
+        if (star_lfsr == 16'd0)
+            star_lfsr <= 16'hACE1;
+        else
+            star_lfsr <= {star_lfsr[14:0],
+                          star_lfsr[15] ^ star_lfsr[13] ^
+                          star_lfsr[12] ^ star_lfsr[10]};
+
+        // Horizontal: 01 = +step, 11 = -step
+        if (star_dx == 2'b01) begin
+            if ((star_pan_x + STAR_PAN_STEP) >= STAR_MAP_W)
+                star_pan_x <= (star_pan_x + STAR_PAN_STEP) - STAR_MAP_W;
+            else
+                star_pan_x <= star_pan_x + STAR_PAN_STEP;
+        end else if (star_dx == 2'b11) begin
+            if (star_pan_x < STAR_PAN_STEP)
+                star_pan_x <= STAR_MAP_W - (STAR_PAN_STEP - star_pan_x);
+            else
+                star_pan_x <= star_pan_x - STAR_PAN_STEP;
+        end
+
+        // Vertical
+        if (star_dy == 2'b01) begin
+            if ((star_pan_y + STAR_PAN_STEP[8:0]) >= STAR_MAP_H)
+                star_pan_y <= (star_pan_y + STAR_PAN_STEP[8:0]) - STAR_MAP_H;
+            else
+                star_pan_y <= star_pan_y + STAR_PAN_STEP[8:0];
+        end else if (star_dy == 2'b11) begin
+            if (star_pan_y < STAR_PAN_STEP[8:0])
+                star_pan_y <= STAR_MAP_H - (STAR_PAN_STEP[8:0] - star_pan_y);
+            else
+                star_pan_y <= star_pan_y - STAR_PAN_STEP[8:0];
+        end
+
+        // Random hold ~2..7 s, then new direction (cardinal or diagonal)
+        if (star_dir_tmr == 16'd0) begin
+            star_dir_tmr <= 16'd100 + {8'd0, star_lfsr[7:0]};
+            case (star_lfsr[3:0])
+                4'd0,  4'd8:  begin star_dx <= 2'b01; star_dy <= 2'b00; end
+                4'd1,  4'd9:  begin star_dx <= 2'b11; star_dy <= 2'b00; end
+                4'd2,  4'd10: begin star_dx <= 2'b00; star_dy <= 2'b01; end
+                4'd3,  4'd11: begin star_dx <= 2'b00; star_dy <= 2'b11; end
+                4'd4,  4'd12: begin star_dx <= 2'b01; star_dy <= 2'b01; end
+                4'd5,  4'd13: begin star_dx <= 2'b01; star_dy <= 2'b11; end
+                4'd6,  4'd14: begin star_dx <= 2'b11; star_dy <= 2'b01; end
+                default:      begin star_dx <= 2'b11; star_dy <= 2'b11; end
+            endcase
+        end else begin
+            star_dir_tmr <= star_dir_tmr - 16'd1;
+        end
+    end
+
     // Snapshot slow-changing HUD inputs into FFs
     begin : hud_latch
         reg [10:0] score0_mag, score1_mag;
@@ -493,7 +533,6 @@ wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
 wire in_sun = in_fb_d && !black_hole_r && (srr_d <= (SUN_R * SUN_R));
 wire in_bh  = in_fb_d && black_hole_r && (srr_d <= (SUN_R * SUN_R));
-wire star_hit = star_rom_hit(pix_x_d, pix_y_d);
 
 localparam integer TM_X0 = 320;
 wire [9:0] s0_hx = 10'd52;
@@ -552,8 +591,6 @@ always @(posedge clk) begin
         end
     end else if (in_bh) begin
         pix_r <= 5'h02; pix_g <= 6'h00; pix_b <= 5'h02;
-    end else if (in_fb_d && star_hit) begin
-        pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else if (in_fb_d && (rdata != COL_OFF)) begin
         if (rdata == COL_PL) begin
             if (pl_hs_flash_r) begin
@@ -570,6 +607,9 @@ always @(posedge clk) begin
         end else begin
             pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // shots white
         end
+    end else if (in_fb_d && star_hit) begin
+        // Background overlay: under ships/shots so ship pass is not mistaken for pan
+        pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else if (in_fb_d && timer_hit) begin
         if (timer_sec_r < 14'd10) begin
             pix_r <= 5'h19; pix_g <= 6'h00; pix_b <= 5'h00;

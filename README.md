@@ -65,7 +65,7 @@ A crash also bounces the ships apart so it only counts once. Deaths **vanish** t
 
 **AI.** Hidden elapsed playtime ramps shot range, standoff, aim, and thrust through **5:00**; hunts by closing range and turning smoothly; avoids walls and (in match) steering/firing through the sun.
 
-**Stars.** 28-point ROM at scanout, in front of ships.
+**Stars.** Constellation panorama in `star_field_rom.vh`: map **3200x470** (**360 deg** wide); screen **800** px (**90 deg**). Drifts at **1 px/frame** with random left/right/up/down (diagonals OK). Scanout overlay under ships/shots.
 
 Per-frame flow (simplified): physics -> bounce / sun / shots -> erase old vectors -> stroke ships -> shot streaks.
 

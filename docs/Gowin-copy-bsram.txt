@@ -16,6 +16,7 @@ Verilog-2001 is fine for this baseline (no SystemVerilog required).
 - src/sw_physics.v
 - src/sw_scanout.v
 - src/sw_config.vh
+- src/star_field_rom.vh  (must sit in src/ for `include; do NOT add as its own Gowin FileList entry)
 - src/fb_ram.v
 - src/sin_cos.v
 - src/lcd_timing.v
