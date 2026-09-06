@@ -75,6 +75,31 @@ function signed [15:0] abs16;
     end
 endfunction
 
+// Keep shot streak endpoints inside FB so erase coords match plotted ink (wrap-safe)
+function signed [15:0] clamp_fb_x;
+    input signed [15:0] v;
+    begin
+        if (v < 16'sd0)
+            clamp_fb_x = 16'sd0;
+        else if (v > (FB_W - 1))
+            clamp_fb_x = FB_W - 16'sd1;
+        else
+            clamp_fb_x = v;
+    end
+endfunction
+
+function signed [15:0] clamp_fb_y;
+    input signed [15:0] v;
+    begin
+        if (v < 16'sd0)
+            clamp_fb_y = 16'sd0;
+        else if (v > (FB_H - 1))
+            clamp_fb_y = FB_H - 16'sd1;
+        else
+            clamp_fb_y = v;
+    end
+endfunction
+
 localparam [3:0] ST_IDLE  = 4'd0;
 localparam [3:0] ST_CLEAR = 4'd1;
 localparam [3:0] ST_ERASE = 4'd2;
@@ -681,14 +706,15 @@ always @(posedge clk or negedge rst_n) begin
                         if (shot_on_i) begin
                             begin : sdir
                                 reg signed [15:0] sx, sy, x0, y0, x1, y1;
-                                x0 = $signed(shot_x_i[23:8]);
-                                y0 = $signed(shot_y_i[23:8]);
+                                x0 = clamp_fb_x($signed(shot_x_i[23:8]));
+                                y0 = clamp_fb_y($signed(shot_y_i[23:8]));
                                 sx = shot_vx_i >>> 9;
                                 sy = shot_vy_i >>> 9;
                                 if (sx == 0 && sy == 0) sx = 16'sd5;
-                                x1 = x0 + sx;
-                                y1 = y0 + sy;
+                                x1 = clamp_fb_x(x0 + sx);
+                                y1 = clamp_fb_y(y0 + sy);
                                 start_line(x0, y0, x1, y1);
+                                // Store clamped endpoints only (10/9-bit trunc of negatives was wrap garbage)
                                 shot_ox[si[2:0]]  <= x0[9:0];
                                 shot_oy[si[2:0]]  <= y0[8:0];
                                 shot_ox2[si[2:0]] <= x1[9:0];

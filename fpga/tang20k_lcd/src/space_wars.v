@@ -46,6 +46,7 @@ wire        [5:0]  frame_cnt;
 wire        [2:0]  lives0;
 wire        [14:0] fuel_ms;
 wire               black_hole;
+wire               green_sun;
 wire               pl_flash_red;
 wire               pl_hs_flash;
 
@@ -165,6 +166,7 @@ sw_physics u_phys (
     .lives0(lives0),
     .fuel_ms(fuel_ms),
     .black_hole(black_hole),
+    .green_sun(green_sun),
     .border_red(border_red),
     .pl_flash_red(pl_flash_red),
     .pl_hs_flash(pl_hs_flash)
@@ -212,11 +214,13 @@ sw_draw u_draw (
 
 sw_scanout u_scan (
     .clk(clk),
+    .frame_start(frame_start),
     .de_now(de_now),
     .pix_x(pix_x),
     .pix_y(pix_y),
     .rdata(rdata),
     .black_hole(black_hole),
+    .green_sun(green_sun),
     .game_over(game_over),
     .await_start(await_start),
     .frame_cnt(frame_cnt),

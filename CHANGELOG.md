@@ -2,6 +2,46 @@
 
 All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
 
+## [1.01.3] - 2026-09-05
+
+Board-OK physics updates on `savepoint/working-bsram-pre-ddr3`.
+
+### Added / changed (board-tested)
+- BH red border: max speed 1/4; margin contact kills (invuln still bounces)
+- Attract test mode: hold S0+S1+S2 ~3s (pixel-clk timer); freeze AI; Diamond user control; Fire shoots (does not start match)
+
+### Notes
+- Branch: `savepoint/working-bsram-pre-ddr3`
+- Open: config menu UI, optional AI maxv ramp
+
+## [1.01.2] - 2026-09-05
+
+Board-OK starfield on `savepoint/working-bsram-pre-ddr3`.
+
+### Added / changed (board-tested)
+- Constellation night-sky catalog (`star_field_rom.vh`): 360deg x wrap map, 90deg window
+- Random drift L/R/U/D (diagonals OK) at 1 px/frame; wrap on both axes
+- Stars are scanout overlay under ships/shots
+- Gowin: keep `star_field_rom.vh` on disk for `include` only (not FileList)
+
+### Notes
+- Branch: `savepoint/working-bsram-pre-ddr3`
+- Open: config menu UI, AI maxv ramp, test mode, BH border kill + 1/4 maxv
+
+## [1.01.1] - 2026-09-05
+
+Working board update on the way to a fuller 1.01.x (more still to add).
+
+### Added / changed (board-tested)
+- Wrap at playfield edges (default); **black** rim; **red** rim + bounce in black-hole mode
+- BH->sun outward 1/r^2 for `CFG_ANTI_GRAV_SEC`, then clear (soft Fire-start resets sun state)
+- Secret green sun (config knobs only; not described in README)
+- Shot streak erase: clamp endpoints to FB (fixes wrap leftover ink)
+
+### Notes
+- Branch: `savepoint/working-bsram-pre-ddr3`
+- Open / not done yet: config menu UI, test mode, BH border kill + 1/4 maxv, etc.
+
 ## [1.0.0] - 2026-09-05
 
 First full release of the board-tested working game (BSRAM playfield).

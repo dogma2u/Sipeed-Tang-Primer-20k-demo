@@ -51,6 +51,7 @@ module sw_physics(
     output reg        [2:0]   lives0,
     output reg        [14:0]  fuel_ms,
     output reg                black_hole,
+    output reg                green_sun,
     output wire               border_red,
     output wire               pl_flash_red,
     output wire               pl_hs_flash
@@ -90,6 +91,7 @@ localparam integer SPAWN_INVULN_FR = `CFG_SPAWN_INVULN_FR;
 localparam integer AI_VANISH_FR   = `CFG_AI_VANISH_FR;
 localparam integer HS_VANISH_FR   = `CFG_HS_VANISH_FR;
 localparam integer HS_FLASH_FR    = `CFG_HS_FLASH_FR;
+localparam [26:0]  TEST_HOLD_CLKS = `CFG_TEST_HOLD_CLKS;
 localparam integer AI_RELOAD_POOR_EXTRA = `CFG_AI_RELOAD_POOR_EXTRA;
 localparam integer AI_GAP_POOR_EXTRA    = `CFG_AI_GAP_POOR_EXTRA;
 localparam integer AI_AIM_FIRE_MIN_PCT  = `CFG_AI_AIM_FIRE_MIN_PCT;
@@ -139,9 +141,14 @@ localparam integer AI_THR_3       = `CFG_AI_THR_3;
 localparam integer SHIP_MAXV      = `CFG_SHIP_MAXV;
 localparam integer DEMO_THR_NUM   = `CFG_DEMO_THR_NUM;
 localparam integer DEMO_THR_DEN   = `CFG_DEMO_THR_DEN;
+localparam integer ANTI_GRAV_SEC_N = `CFG_ANTI_GRAV_SEC;
+localparam integer GREEN_SUN_HITS  = `CFG_GREEN_SUN_HITS;
+localparam integer GREEN_SUN_MAG   = `CFG_GREEN_SUN_GRAV_MAG;
+localparam integer GREEN_SUN_NUM   = `CFG_GREEN_SUN_NUM;
 // Attract: full top thrust * NUM/DEN (not playtime ramp)
 localparam signed [15:0] DEMO_THRUST = (AI_THR_3 * DEMO_THR_NUM) / DEMO_THR_DEN;
 localparam signed [15:0] SHIP_MAXV_Q88 = SHIP_MAXV <<< 8;
+localparam signed [15:0] SHIP_MAXV_BH_Q88 = (SHIP_MAXV / 4) <<< 8; // 1/4 when red border (BH)
 
 localparam [1:0] COL_OFF  = 2'b00;
 localparam [1:0] COL_PL   = 2'b01;
@@ -177,6 +184,31 @@ function signed [15:0] grav_acc;
         else if (q < -32'sd24)
             q = -32'sd24;
         grav_acc = invert ? -$signed(q[15:0]) : q[15:0];
+    end
+endfunction
+
+// Stronger 1/r^2 for secret green sun (AI only)
+function signed [15:0] grav_acc_green;
+    input signed [15:0] dcomp;
+    input signed [15:0] gdx;
+    input signed [15:0] gdy;
+    input               invert;
+    reg signed [31:0] r2v;
+    reg signed [31:0] num;
+    reg signed [31:0] q;
+    reg signed [31:0] lim;
+    begin
+        r2v = (gdx * gdx) + (gdy * gdy);
+        if (r2v < 32'sd256)
+            r2v = 32'sd256;
+        num = dcomp * GREEN_SUN_NUM;
+        lim = GREEN_SUN_MAG;
+        q   = num / r2v;
+        if (q > lim)
+            q = lim;
+        else if (q < -lim)
+            q = -lim;
+        grav_acc_green = invert ? -$signed(q[15:0]) : q[15:0];
     end
 endfunction
 
@@ -315,6 +347,10 @@ reg        [2:0]  bh_hits;
 reg               crash_sun0; // player ship into sun/BH this cycle
 reg               crash_sun1; // AI ship into sun/BH this cycle
 reg               anti_grav;
+reg        [3:0]  anti_grav_sec;
+reg        [5:0]  green_hits;   // player shot hits on sun/BH toward unlock
+reg               green_inv;    // 0 pull, 1 push (flips while green)
+reg               green_shot_r; // player shot hit sun this frame
 reg        [2:0]  hit_si;     // sequential shot hit index (Pass B)
 reg               hit_ai_r, hit_pl_r, sun_p_r, sun_e_r;
 reg        [6:0]  spawn0_fr;  // player spawn invuln countdown
@@ -325,6 +361,8 @@ reg        [1:0]  hs_phase;     // 0 idle, 1 vanish, 2 flash
 reg        [6:0]  hs_fr;
 reg               hs_red;
 reg               hyper_prev;
+reg               test_mode;    // attract: AI frozen, Diamond user-controlled
+reg [26:0]        test_hold_clks; // S0+S1+S2 hold (pixel clk; not frame_kick)
 
 // Internal unified shot bank (packed to ports combinationally)
 reg               shot_on_i   [0:7];
@@ -362,6 +400,7 @@ wire right_p  = ~btn_right_n;
 wire thrust_p = ~btn_thrust_n;
 wire fire_p   = ~btn_fire_n;
 wire hyper_p  = ~btn_hyper_n;
+wire test_combo = hyper_p && left_p && right_p; // S0+S1+S2
 wire               demo_mode = game_over || await_start;
 
 // Registered once per frame (FF, not combo trees) -- cuts LUT fanout
@@ -405,6 +444,46 @@ task bounce_ship;
             py = (FB_H - MARGIN) <<< 8;
             vy = -vy;
         end
+    end
+endtask
+
+// True if Q8.8 pos is at/past bounce margin (red-border kill zone)
+function wall_hit_q;
+    input signed [23:0] px, py;
+    begin
+        wall_hit_q = (px < (MARGIN <<< 8)) ||
+                     (px > ((FB_W - MARGIN) <<< 8)) ||
+                     (py < (MARGIN <<< 8)) ||
+                     (py > ((FB_H - MARGIN) <<< 8));
+    end
+endfunction
+
+// Toroidal wrap (no colored border). Keep gameplay FB size; do not change MARGIN bounce geom.
+task wrap_ship;
+    inout signed [23:0] px, py;
+    begin
+        if (px < 24'sd0)
+            px = px + (FB_W <<< 8);
+        else if (px >= (FB_W <<< 8))
+            px = px - (FB_W <<< 8);
+        if (py < 24'sd0)
+            py = py + (FB_H <<< 8);
+        else if (py >= (FB_H <<< 8))
+            py = py - (FB_H <<< 8);
+    end
+endtask
+
+task wrap_shot;
+    inout signed [23:0] px, py;
+    begin
+        if (px < 24'sd0)
+            px = px + (FB_W <<< 8);
+        else if (px >= (FB_W <<< 8))
+            px = px - (FB_W <<< 8);
+        if (py < 24'sd0)
+            py = py + (FB_H <<< 8);
+        else if (py >= (FB_H <<< 8))
+            py = py - (FB_H <<< 8);
     end
 endtask
 
@@ -491,6 +570,11 @@ always @(posedge clk or negedge rst_n) begin
         crash_sun1   <= 1'b0;
         black_hole   <= 1'b0;
         anti_grav    <= 1'b0;
+        anti_grav_sec <= 4'd0;
+        green_sun    <= 1'b0;
+        green_hits   <= 6'd0;
+        green_inv    <= 1'b0;
+        green_shot_r <= 1'b0;
         hit_si       <= 3'd0;
         hit_ai_r     <= 1'b0;
         hit_pl_r     <= 1'b0;
@@ -504,6 +588,8 @@ always @(posedge clk or negedge rst_n) begin
         hs_fr        <= 7'd0;
         hs_red       <= 1'b0;
         hyper_prev   <= 1'b0;
+        test_mode      <= 1'b0;
+        test_hold_clks <= 27'd0;
         play_cap_r   <= 9'd0;
         ai_wild      <= 1'b0;
         ai_life_n    <= AI_LIFE_0[5:0];
@@ -539,8 +625,19 @@ always @(posedge clk or negedge rst_n) begin
 
         hyper_prev <= hyper_p;
 
-        // Fire to start (boot or GAME OVER) -- only when draw idle (no mid-pass mutate)
-        if (demo_mode && fire_p && !fire_prev && !draw_pending && !draw_busy) begin
+        // Test mode toggle (attract / PUSH FIRE only). Count pixel clocks -- NOT
+        // frame_start/frame_kick (that is masked while draw_busy, so hold never finished).
+        if (demo_mode && test_combo) begin
+            if (test_hold_clks == (TEST_HOLD_CLKS - 27'd1))
+                test_mode <= ~test_mode;
+            if (test_hold_clks < TEST_HOLD_CLKS)
+                test_hold_clks <= test_hold_clks + 27'd1;
+        end else begin
+            test_hold_clks <= 27'd0;
+        end
+
+        // Fire to start (boot or GAME OVER) -- not while demo test_mode (Fire = shoot)
+        if (demo_mode && !test_mode && fire_p && !fire_prev && !draw_pending && !draw_busy) begin
             state        <= ST_IDLE;
             phys_phase   <= 3'd0;
             ei           <= 4'd0;
@@ -561,6 +658,8 @@ always @(posedge clk or negedge rst_n) begin
             ship_lock    <= 1'b0;
             game_over    <= 1'b0;
             await_start  <= 1'b0;
+            test_mode      <= 1'b0;
+            test_hold_clks <= 27'd0;
             timer_sec    <= TIMER_START[13:0];
             frame_cnt    <= 6'd0;
             lives0       <= LIFE_START[2:0];
@@ -572,6 +671,11 @@ always @(posedge clk or negedge rst_n) begin
             crash_sun1   <= 1'b0;
             black_hole   <= 1'b0;
             anti_grav    <= 1'b0;
+            anti_grav_sec <= 4'd0;
+            green_sun    <= 1'b0;
+            green_hits   <= 6'd0;
+            green_inv    <= 1'b0;
+            green_shot_r <= 1'b0;
             for (si = 0; si < 8; si = si + 1) begin
                 shot_on_i[si]   <= 1'b0;
                 shot_life_i[si] <= 6'd0;
@@ -595,8 +699,8 @@ always @(posedge clk or negedge rst_n) begin
             hs_red       <= 1'b0;
         end
 
-        // S0 hyperspace edge (match only; not during death vanish)
-        if (!demo_mode && hyper_p && !hyper_prev &&
+        // S0 hyperspace edge (match only; not during death vanish / test-combo hold)
+        if (!demo_mode && hyper_p && !hyper_prev && !test_combo &&
             (hs_phase == 2'd0) && (pl_vanish_fr == 5'd0)) begin
             hs_phase   <= 2'd1;
             hs_fr      <= HS_VANISH_FR[6:0];
@@ -608,7 +712,8 @@ always @(posedge clk or negedge rst_n) begin
         end
 
         // Rising edge -> one shot; hold keeps auto-fire via fire_p
-        if (fire_p && !fire_prev && !demo_mode)
+        // Demo+test_mode: user fire like match
+        if (fire_p && !fire_prev && (!demo_mode || test_mode))
             fire_hold <= 1'b1;
         fire_prev <= fire_p;
 
@@ -636,6 +741,18 @@ always @(posedge clk or negedge rst_n) begin
                             if (play_sec < PLAY_MAX_SEC[8:0])
                                 play_sec <= play_sec + 9'd1;
                         end
+                        // BH->sun outward push: clear after CFG_ANTI_GRAV_SEC
+                        if (anti_grav) begin
+                            if (anti_grav_sec <= 4'd1) begin
+                                anti_grav     <= 1'b0;
+                                anti_grav_sec <= 4'd0;
+                                sun_hits      <= 4'd0;
+                            end else
+                                anti_grav_sec <= anti_grav_sec - 4'd1;
+                        end
+                        // Green sun: flip pull/push each second (AI only)
+                        if (green_sun)
+                            green_inv <= lfsr[0];
                     end else
                         frame_cnt <= frame_cnt + 6'd1;
                     // Latch AI ramps + keep-out + invuln once/frame (FF, not combo)
@@ -723,7 +840,7 @@ always @(posedge clk or negedge rst_n) begin
                     3'd0: begin
                         if ((pl_vanish_fr != 5'd0) || (hs_phase == 2'd1)) begin
                             thrusting0 <= 1'b0;
-                        end else if (demo_mode) begin
+                        end else if (demo_mode && !test_mode) begin
                             // Attract: full player turn rate (4) every frame; wall > sun > hunt
                             begin : demo_pl_steer
                                 reg signed [15:0] tdx, tdy, adx, ady, fx, fy;
@@ -752,8 +869,9 @@ always @(posedge clk or negedge rst_n) begin
                             end
                             fuel_ms <= FUEL_MAX_MS[14:0];
                         end else begin
-                            if (left_p)  ang0 <= ang0 - 8'd4;
-                            if (right_p) ang0 <= ang0 + 8'd4;
+                            // Match, or demo+test_mode: Diamond under user buttons
+                            if (left_p && !test_combo)  ang0 <= ang0 - 8'd4;
+                            if (right_p && !test_combo) ang0 <= ang0 + 8'd4;
                             if (thrust_p && (fuel_ms != 15'd0) && (pl_vanish_fr == 5'd0)) begin
                                 thrusting0 <= 1'b1;
                                 if (fuel_ms > FUEL_FRAME_MS[14:0])
@@ -762,6 +880,8 @@ always @(posedge clk or negedge rst_n) begin
                                     fuel_ms <= 15'd0;
                             end else
                                 thrusting0 <= 1'b0;
+                            if (demo_mode && test_mode)
+                                fuel_ms <= FUEL_MAX_MS[14:0]; // demo test: no fuel starve
                         end
                         dx <= $signed(pos0_x[23:8]) - $signed(pos1_x[23:8]);
                         dy <= $signed(pos0_y[23:8]) - $signed(pos1_y[23:8]);
@@ -778,7 +898,9 @@ always @(posedge clk or negedge rst_n) begin
                         phys_phase <= 3'd3;
                     end
                     3'd3: begin
-                        if ((ai_vanish_fr == 5'd0)) begin
+                        if ((test_mode && demo_mode_r) || (ai_vanish_fr != 5'd0)) begin
+                            thrusting1 <= 1'b0;
+                        end else begin
                             begin : ai_steer
                                 reg signed [15:0] adx, ady, fx, fy;
                                 reg [7:0] turn, want;
@@ -812,8 +934,7 @@ always @(posedge clk or negedge rst_n) begin
                                                   ((adx + ady) > $signed({6'b0, ai_standoff}));
                                 end
                             end
-                        end else
-                            thrusting1 <= 1'b0;
+                        end
                         phys_phase <= 3'd4;
                     end
                     3'd4: begin
@@ -826,6 +947,7 @@ always @(posedge clk or negedge rst_n) begin
                             reg signed [15:0] thr, nvx, nvy;
                             gdx = SUN_XS - $signed(pos0_x[23:8]);
                             gdy = SUN_YS - $signed(pos0_y[23:8]);
+                            // Diamond: BH / anti-grav only (green sun does not pull player)
                             if (black_hole || anti_grav) begin
                                 gx = grav_acc(gdx, gdx, gdy, anti_grav);
                                 gy = grav_acc(gdy, gdx, gdy, anti_grav);
@@ -841,7 +963,10 @@ always @(posedge clk or negedge rst_n) begin
                                 thr = PL_THRUST[15:0];
                             nvx = vel0_x + mul_q88(cos_a, thr) + gx - (vel0_x >>> 8);
                             nvy = vel0_y + mul_q88(sin_a, thr) + gy - (vel0_y >>> 8);
-                            if (demo_mode_r) begin
+                            if (black_hole) begin
+                                nvx = clamp_vel(nvx, SHIP_MAXV_BH_Q88);
+                                nvy = clamp_vel(nvy, SHIP_MAXV_BH_Q88);
+                            end else if (demo_mode_r) begin
                                 nvx = clamp_vel(nvx, SHIP_MAXV_Q88);
                                 nvy = clamp_vel(nvy, SHIP_MAXV_Q88);
                             end
@@ -859,7 +984,7 @@ always @(posedge clk or negedge rst_n) begin
                                 reg signed [15:0] tdx, tdy;
                                 reg               want;
                                 want = 1'b0;
-                                if (!demo_mode)
+                                if (!demo_mode || test_mode)
                                     want = (fire_hold || fire_p);
                                 else begin
                                     tdx = $signed(pos1_x[23:8]) - $signed(pos0_x[23:8]);
@@ -940,6 +1065,9 @@ always @(posedge clk or negedge rst_n) begin
                             if (black_hole || anti_grav) begin
                                 gx = grav_acc(gdx, gdx, gdy, anti_grav);
                                 gy = grav_acc(gdy, gdx, gdy, anti_grav);
+                            end else if (green_sun) begin
+                                gx = grav_acc_green(gdx, gdx, gdy, green_inv);
+                                gy = grav_acc_green(gdy, gdx, gdy, green_inv);
                             end else begin
                                 gx = 16'sd0;
                                 gy = 16'sd0;
@@ -952,7 +1080,10 @@ always @(posedge clk or negedge rst_n) begin
                                 thr = ai_thrust;
                             nvx = vel1_x + mul_q88(cos_a, thr) + gx - (vel1_x >>> 8);
                             nvy = vel1_y + mul_q88(sin_a, thr) + gy - (vel1_y >>> 8);
-                            if (demo_mode_r) begin
+                            if (black_hole) begin
+                                nvx = clamp_vel(nvx, SHIP_MAXV_BH_Q88);
+                                nvy = clamp_vel(nvy, SHIP_MAXV_BH_Q88);
+                            end else if (demo_mode_r) begin
                                 nvx = clamp_vel(nvx, SHIP_MAXV_Q88);
                                 nvy = clamp_vel(nvy, SHIP_MAXV_Q88);
                             end
@@ -963,7 +1094,8 @@ always @(posedge clk or negedge rst_n) begin
                             ai_reload <= ai_reload - 5'd1;
                         else if (ai_cd != 5'd0)
                             ai_cd <= ai_cd - 5'd1;
-                        else if ((pl_vanish_fr == 5'd0) && (ai_vanish_fr == 5'd0) &&
+                        else if (!(test_mode && demo_mode_r) &&
+                                 (pl_vanish_fr == 5'd0) && (ai_vanish_fr == 5'd0) &&
                                  demo_ai_tick &&
                                  facing_ok(ang1, want_facing(dx, dy)) &&
                                  !shot_thru_sun($signed(pos1_x[23:8]),
@@ -1043,15 +1175,49 @@ always @(posedge clk or negedge rst_n) begin
                     begin : bnc
                         reg signed [23:0] t0x, t0y, t1x, t1y;
                         reg signed [15:0] v0x, v0y, v1x, v1y;
+                        // BH red border: kill on contact (invuln still bounces). Else wrap.
                         if ((pl_vanish_fr == 5'd0) && (hs_phase != 2'd1)) begin
                             t0x = pos0_x; t0y = pos0_y; v0x = vel0_x; v0y = vel0_y;
-                            bounce_ship(t0x, t0y, v0x, v0y);
-                            pos0_x <= t0x; pos0_y <= t0y; vel0_x <= v0x; vel0_y <= v0y;
+                            if (black_hole && wall_hit_q(t0x, t0y) && !pl_invuln) begin
+                                score_bump1;
+                                pos0_x       <= -(24'sd80 <<< 8);
+                                pos0_y       <= -(24'sd80 <<< 8);
+                                vel0_x       <= 16'sd0;
+                                vel0_y       <= 16'sd0;
+                                thrusting0   <= 1'b0;
+                                pl_vanish_fr <= AI_VANISH_FR[4:0];
+                                if (!demo_mode && (lives0 != 3'd0)) begin
+                                    if (lives0 == 3'd1) begin
+                                        game_over <= 1'b1;
+                                        timer_sec <= DEMO_TIMER[13:0];
+                                    end
+                                    lives0 <= lives0 - 3'd1;
+                                end
+                            end else if (black_hole) begin
+                                bounce_ship(t0x, t0y, v0x, v0y);
+                                pos0_x <= t0x; pos0_y <= t0y; vel0_x <= v0x; vel0_y <= v0y;
+                            end else begin
+                                wrap_ship(t0x, t0y);
+                                pos0_x <= t0x; pos0_y <= t0y; vel0_x <= v0x; vel0_y <= v0y;
+                            end
                         end
                         if (ai_vanish_fr == 5'd0) begin
                             t1x = pos1_x; t1y = pos1_y; v1x = vel1_x; v1y = vel1_y;
-                            bounce_ship(t1x, t1y, v1x, v1y);
-                            pos1_x <= t1x; pos1_y <= t1y; vel1_x <= v1x; vel1_y <= v1y;
+                            if (black_hole && wall_hit_q(t1x, t1y) && !ai_invuln) begin
+                                score_bump0;
+                                pos1_x       <= -(24'sd80 <<< 8);
+                                pos1_y       <= -(24'sd80 <<< 8);
+                                vel1_x       <= 16'sd0;
+                                vel1_y       <= 16'sd0;
+                                thrusting1   <= 1'b0;
+                                ai_vanish_fr <= AI_VANISH_FR[4:0];
+                            end else if (black_hole) begin
+                                bounce_ship(t1x, t1y, v1x, v1y);
+                                pos1_x <= t1x; pos1_y <= t1y; vel1_x <= v1x; vel1_y <= v1y;
+                            end else begin
+                                wrap_ship(t1x, t1y);
+                                pos1_x <= t1x; pos1_y <= t1y; vel1_x <= v1x; vel1_y <= v1y;
+                            end
                         end
                     end
                     dx <= $signed(pos0_x[23:8]) - $signed(pos1_x[23:8]);
@@ -1095,15 +1261,21 @@ always @(posedge clk or negedge rst_n) begin
                     end
                     ei <= 4'd3;
                 end else if (ei == 4'd3) begin
-                    for (si = 0; si < 8; si = si + 1) begin
-                        if (shot_on_i[si]) begin
-                            shot_x_i[si] <= shot_x_i[si] + {{8{shot_vx_i[si][15]}}, shot_vx_i[si]};
-                            shot_y_i[si] <= shot_y_i[si] + {{8{shot_vy_i[si][15]}}, shot_vy_i[si]};
-                            if (shot_life_i[si] != 6'd0)
-                                shot_life_i[si] <= shot_life_i[si] - 6'd1;
+                    begin : shot_int
+                        reg signed [23:0] sx, sy;
+                        for (si = 0; si < 8; si = si + 1) begin
+                            if (shot_on_i[si]) begin
+                                sx = shot_x_i[si] + {{8{shot_vx_i[si][15]}}, shot_vx_i[si]};
+                                sy = shot_y_i[si] + {{8{shot_vy_i[si][15]}}, shot_vy_i[si]};
+                                if (!black_hole)
+                                    wrap_shot(sx, sy);
+                                shot_x_i[si] <= sx;
+                                shot_y_i[si] <= sy;
+                                if (shot_life_i[si] != 6'd0)
+                                    shot_life_i[si] <= shot_life_i[si] - 6'd1;
+                            end
                         end
                     end
-                    // Shot integrate only (boom retired)
                     ei <= 4'd4;
                 end else if (ei == 4'd4) begin : ram_init
                     // Ram once, then sequential shot hits (Pass B)
@@ -1137,6 +1309,7 @@ always @(posedge clk or negedge rst_n) begin
                     hit_pl_r <= 1'b0;
                     sun_p_r  <= crash_sun0;
                     sun_e_r  <= crash_sun1;
+                    green_shot_r <= 1'b0;
                     hit_si   <= 3'd0;
                     ei       <= 4'd5;
                 end else if (ei == 4'd5) begin : hit_one
@@ -1157,9 +1330,13 @@ always @(posedge clk or negedge rst_n) begin
                         default: begin son = shot_on_i[7]; sx = shot_x_i[7]; sy = shot_y_i[7]; slife = shot_life_i[7]; end
                     endcase
                     kill = 1'b0;
+                    // BH bounce mode: shots die past MARGIN. Wrap mode: full FB (then wrap).
                     if (son && (slife != 6'd0) &&
-                        (sx >= (MARGIN <<< 8)) && (sx <= ((FB_W - MARGIN) <<< 8)) &&
-                        (sy >= (MARGIN <<< 8)) && (sy <= ((FB_H - MARGIN) <<< 8))) begin
+                        (black_hole ?
+                         ((sx >= (MARGIN <<< 8)) && (sx <= ((FB_W - MARGIN) <<< 8)) &&
+                          (sy >= (MARGIN <<< 8)) && (sy <= ((FB_H - MARGIN) <<< 8))) :
+                         ((sx >= 24'sd0) && (sx < (FB_W <<< 8)) &&
+                          (sy >= 24'sd0) && (sy < (FB_H <<< 8))))) begin
                         if (hit_si <= 3'd4) begin
                             bdx = $signed(sx[23:8]) - $signed(pos1_x[23:8]);
                             bdy = $signed(sy[23:8]) - $signed(pos1_y[23:8]);
@@ -1179,6 +1356,7 @@ always @(posedge clk or negedge rst_n) begin
                             end else if (sun_hit_m($signed(sx[23:8]), $signed(sy[23:8]))) begin
                                 kill = 1'b1;
                                 sun_p_r <= 1'b1;
+                                green_shot_r <= 1'b1;
                             end
                         end else begin
                             bdx = $signed(sx[23:8]) - $signed(pos0_x[23:8]);
@@ -1234,9 +1412,10 @@ always @(posedge clk or negedge rst_n) begin
                     if (black_hole) begin
                         if (sun_p_r) begin
                             if (nbh == (BH_HITS_SUN[2:0] - 3'd1)) begin
-                                black_hole <= 1'b0;
-                                anti_grav  <= 1'b1;
-                                bh_hits    <= 3'd0;
+                                black_hole    <= 1'b0;
+                                anti_grav     <= 1'b1;
+                                anti_grav_sec <= ANTI_GRAV_SEC_N[3:0];
+                                bh_hits       <= 3'd0;
                             end else
                                 bh_hits <= nbh + 3'd1;
                         end
@@ -1246,6 +1425,14 @@ always @(posedge clk or negedge rst_n) begin
                         sun_hits <= nsh;
                         if (nsh >= SUN_HITS_BH[3:0])
                             black_hole <= 1'b1;
+                    end
+
+                    // Secret green sun: count player shots into sun/BH only
+                    if (!green_sun && green_shot_r) begin
+                        if (green_hits >= (GREEN_SUN_HITS[5:0] - 6'd1))
+                            green_sun <= 1'b1;
+                        else
+                            green_hits <= green_hits + 6'd1;
                     end
 
                     if (hit_pl_r && !demo_mode && (nl0 != 3'd0))
