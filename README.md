@@ -195,7 +195,8 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 
 </div>
 
-If you keep a separate Gowin tree, copy all of `fpga/tang20k_lcd/src/*.v` **and** `sw_config.vh`. Keep `sw_config.vh` on the FileList. See `docs/Gowin-copy-bsram.txt`.
+If you keep a separate Gowin tree, copy all of `fpga/tang20k_lcd/src/*.v` **and** `sw_config.vh`.  
+Keep `sw_config.vh` on the FileList. See `docs/Gowin-copy-bsram.txt`.
 
 ## Synth snapshot (GW2A-18C)
 
