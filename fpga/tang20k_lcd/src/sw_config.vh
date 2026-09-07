@@ -56,7 +56,7 @@
 `define CFG_AI_SPAWN_THRUST_FR 25
 // Min pixel separation between ships on spawn (1/4 screen width)
 `define CFG_SPAWN_MIN_DIST  200
-// Attract test mode: Dock DIP5 up (pin T5). Down = normal attract.
+// Attract test mode: Dock DIP5 down (pin T5). Up = normal attract.
 
 // --- AI playtime ramps ---
 `define CFG_PLAY_MAX_SEC         300

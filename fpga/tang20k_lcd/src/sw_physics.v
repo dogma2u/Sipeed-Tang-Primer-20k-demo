@@ -481,7 +481,7 @@ wire right_p  = ~btn_right_n;
 wire thrust_p = ~btn_thrust_n;
 wire fire_p   = ~btn_fire_n;
 wire hyper_p  = ~btn_hyper_n;
-wire dip5_test = dip5_n; // DIP5 up = attract test; down = normal
+wire dip5_test = ~dip5_n; // DIP5 down = attract test; up = normal (board OK)
 wire               demo_mode = game_over || await_start;
 
 // Registered once per frame (FF, not combo trees) -- cuts LUT fanout
@@ -773,7 +773,7 @@ always @(posedge clk or negedge rst_n) begin
 
         hyper_prev <= hyper_p;
 
-        // Attract test mode: DIP5 up (level). Match clears it.
+        // Attract test mode: DIP5 down. Match clears it.
         if (demo_mode)
             test_mode <= dip5_test;
         else

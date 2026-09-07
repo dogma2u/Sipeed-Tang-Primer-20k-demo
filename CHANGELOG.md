@@ -7,7 +7,7 @@ All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
 **Final board release** for this GW2A-18 tree. FPGA is full (Logic ~93%, BSRAM 100%) — no room for menus, SSRAM, or SPI.
 
 ### Added / changed (board-tested)
-- DIP5 attract test mode (pin T5): **up** = test (fly Diamond, AI frozen; Fire shoots), **down** = normal attract
+- DIP5 attract test mode (pin T5): **up** = normal attract, **down** = test (fly Diamond, AI frozen; Fire shoots)
 - AI `want_facing` ~5 deg bins in all modes (no 90 deg cardinal snap)
 - Countdown timer MM/SS each 0..59 (max **59:59**; match start **01:30**)
 - Synth snapshot and full Gowin dump in `FPGA_Data.text`

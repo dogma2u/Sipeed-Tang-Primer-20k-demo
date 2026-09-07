@@ -1,6 +1,6 @@
 // Tang Primer 20K Dock + 5" LCD -- Space Wars-style (sun + gravity + thrust)
 //
-// DIP1 down = core enable (required). DIP5 up = attract test mode (down = normal).
+// DIP1 down = core enable (required). DIP5 down = attract test mode (up = normal).
 // Controls (active-low):
 //   S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace
 //   Diamond = you; wedge = AI
