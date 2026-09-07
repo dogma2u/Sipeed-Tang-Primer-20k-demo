@@ -130,7 +130,7 @@ Pong-style **block digits** along the top:
 - Center **MM:SS** countdown (match starts at **01:30**)
 - Timer turns **yellow** under 0:30 and **red** under 0:10
 - Scores are three digits with leading zero suppression, scores can go negative.
-- Under the player score: **wedge life icons** (start 3, max 5). Every **5 AI kills** grants an extra life if under the cap
+- Triangles under the player score represent lives left (5 max.) Bonus life after 5 AI kills.
 - Beside the player score: a **vertical fuel bar** (**15 s** of thrust) — green, yellow at ≤10%, red at ≤5%. Empty fuel blocks thrust until respawn. The AI has unlimited lives
 
 </div>
