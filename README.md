@@ -12,6 +12,7 @@ Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/sr
 
 Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
 You fly the Diamond shaped ship (green) and AI flies a wedge shaped ship (Yellow).  
+AI hunts and shoots at you, and is more aggressive as time goes on.  
 Vector outlines, orange sun / black hole, bounce walls, scores, fuel, and a countdown.
 
 See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
