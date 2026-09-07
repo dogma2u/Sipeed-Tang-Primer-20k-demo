@@ -10,7 +10,8 @@ Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/s
 
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
-Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump. You fly the **Diamond**; a yellow AI **wedge** hunts and shoots. Vector outlines, orange sun / black hole, bounce walls, scores, fuel, and a countdown.
+Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
+You fly the **Diamond**; a yellow AI **wedge** hunts and shoots. Vector outlines, orange sun / black hole, bounce walls, scores, fuel, and a countdown.
 
 See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
