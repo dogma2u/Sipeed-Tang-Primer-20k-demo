@@ -2,30 +2,19 @@
 
 # Sipeed Tang Primer 20K — Space Wars
 
-<table align="center" cellpadding="8" cellspacing="0" bgcolor="#ab7df8">
-  <tr>
-    <td>
-      <table align="center" cellpadding="20" cellspacing="0" bgcolor="#0d1117" width="100%">
-        <tr>
-          <td align="center">
+</div>
 
-**IMPORTANT**
+> [!IMPORTANT]
+> ### Game over — end of the line
+>
+> This FPGA is **full**. Logic is packed to the brim, **every BSRAM** is spoken for, and there is no room left for a menu system, onboard **SDRAM** (DDR3), or SPI.
+>
+> The board game stops here. No bigger feature set on this chip — just the match you can play today.
+> Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
+>
+> **GAME OVER.** Thanks for flying.
 
-### Game over — end of the line
-
-This FPGA is **full**. Logic is packed to the brim, **every BSRAM** is spoken for, and there is no room left for a menu system, onboard **SDRAM** (DDR3), or SPI.
-
-The board game stops here. No bigger feature set on this chip — just the match you can play today.
-Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
-
-**GAME OVER.** Thanks for flying.
-
-</td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
+<div align="center">
 
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
