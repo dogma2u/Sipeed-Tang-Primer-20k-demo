@@ -115,7 +115,8 @@ Extreme values can change feel a lot; synth/util usually stays similar if you on
 
 On boot and after **GAME OVER**, an **attract demo** runs: both ships are AI-controlled,  
 life and fuel are unlimited, and the timer wraps **00:00 → 59:59**.  
-Bright green **PUSH FIRE TO START** appears under the playfield text. Press **Fire** when draw is idle to start a match (timer **01:30**, lives and fuel restored).
+Bright green **PUSH FIRE TO START** appears under the playfield text.  
+Press **Fire** when draw is idle to start a match (timer **01:30**, lives and fuel restored).
 
 ## Scoreboard
 
