@@ -131,7 +131,7 @@ Pong-style **block digits** along the top:
 - Timer turns **yellow** under 0:30 and **red** under 0:10
 - Scores are three digits with leading zero suppression, scores can go negative.
 - Triangles under the player score represent lives left (5 max.) Bonus life after 5 AI kills.
-- A vertical fuel bar (15 s of thrust) next to player score is green, yellow at ≤10%, red at ≤5%. Empty: no thrust until respawn.
+- A fuel bar (15s of thrust) beside player score is green, yellow at ≤10%, red at ≤5%. Empty: no thrust until respawn.
 
 </div>
 
