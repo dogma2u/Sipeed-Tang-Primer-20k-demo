@@ -127,7 +127,7 @@ Pong-style **block digits** along the top:
 <div align="left">
 
 - **Player** score on the left, **AI** score on the right (light blue)
-- Center **MM:SS** countdown (packed as `MM×100+SS`; each field **0…59**, max **59:59**; match starts at **01:30**)
+- Center **MM:SS** countdown (match starts at **01:30**)
 - Timer turns **yellow** under 0:30 and **red** under 0:10
 - Scores are three digits with leading-zero blanking (**−999…999**; wrap **999 → 0**). Negative scores show a minus bar
 - Under the player score: **wedge life icons** (start 3, max 5). Every **5 AI kills** grants an extra life if under the cap
