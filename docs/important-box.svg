@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="340" viewBox="0 0 860 340">
+  <rect x="6" y="6" width="848" height="328" fill="#0d1117" stroke="#ab7df8" stroke-width="10" rx="6"/>
+  <text x="430" y="48" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">IMPORTANT</text>
+  <text x="430" y="88" text-anchor="middle" fill="#f0f6fc" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="26" font-weight="700">Game over - end of the line</text>
+  <text x="430" y="130" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">This FPGA is full. Logic is packed to the brim, every BSRAM is spoken for,</text>
+  <text x="430" y="152" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">and there is no room left for a menu system, onboard SDRAM (DDR3), or SPI.</text>
+  <text x="430" y="190" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">The board game stops here. No bigger feature set on this chip - just the match you can play today.</text>
+  <text x="430" y="212" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">Want a different feel? Edit the knobs in sw_config.vh (see Tweaking gameplay below).</text>
+  <text x="430" y="268" text-anchor="middle" fill="#f0f6fc" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">GAME OVER. Thanks for flying.</text>
+</svg>
