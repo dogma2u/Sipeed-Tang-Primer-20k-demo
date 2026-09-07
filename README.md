@@ -172,7 +172,8 @@ FB writes are FF-pipelined (1 cycle).
 
 **Sun:** Composited in scanout (not in the FB) as an orange circle at (400, 240), radius 18, in front of ships.  
 Hitting the sun (or black-hole / restored-sun core) **costs a player life**.  
-After **10 shots** hit the sun it becomes a **black hole** with **1/r²** pull and a **red border**. **5 player shots** into the hole restore the sun with outward **1/r²** push for **10 s**, then gravity clears.
+After **10 shots** hit the sun it becomes a **black hole** with **1/r²** pull and a **red border**.  
+**5 player shots** into the hole restore the sun with outward **1/r²** push for **10 s**, then gravity clears.
 
 **Ships / fire:** Vertex outlines via `sin_cos.v`, Q8.8 positions. Mag: **5 shots / ~500 ms**, then **500 ms** reload; one shot per tap. AI bullets live at most ~**75%** of player shot life. Max speed clamp: **`CFG_SHIP_MAXV` = 10** (all modes).
 
