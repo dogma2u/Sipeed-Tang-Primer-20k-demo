@@ -108,7 +108,8 @@ Common knobs:
 | `CFG_PL_THRUST` | Player thrust strength | `60` |
 
 Also nearby: lives (`CFG_LIFE_START` / `CFG_LIFE_MAX`), shot speed / magazine, sun and AI ramps.  
-Keep timer fields as `MM×100+SS` with each part **0…59**. Extreme values can change feel a lot; synth/util usually stays similar if you only touch these numbers.
+Keep timer fields as `MM×100+SS` with each part **0…59**.  
+Extreme values can change feel a lot; synth/util usually stays similar if you only touch these numbers.
 
 ## Attract / start
 
