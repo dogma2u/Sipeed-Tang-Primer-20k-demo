@@ -160,7 +160,8 @@ Play freezes; **GAME OVER** flashes (2 Hz, 50% duty) with **PUSH FIRE TO START**
 
 **Modules:** `sw_physics.v` (AI, gravity, shots, scores, hyperspace),  
 `sw_draw.v` (erase / stroke), `sw_scanout.v` (LCD composite).  
-`space_wars.v` is thin glue plus shared `sin_cos` / `fb_ram`. Shot bank: **8** slots (player 0–4, AI 5–7). Gameplay controls: `sw_config.vh` (see **Tweaking gameplay**).
+`space_wars.v` is thin glue plus shared `sin_cos` / `fb_ram`. Shot bank: **8** slots (player 0–4, AI 5–7).  
+Gameplay controls: `sw_config.vh` (see **Tweaking gameplay**).
 
 **Framebuffer:** 800×470 **2-bit** BSRAM. Full 800×480×2 does not fit in 46 BSRAM, so the bottom 10 LCD lines stay black. One playfield page only; erase/redraw while physics frames may drop if draw is busy. FB writes are FF-pipelined (1 cycle).
 
