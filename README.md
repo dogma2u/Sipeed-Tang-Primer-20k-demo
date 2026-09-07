@@ -147,7 +147,8 @@ Deaths **vanish**, then respawn (AI always; player only if lives remain).
 Respawn can land anywhere (including on the sun) with **1.5 s** invulnerability.  
 Sun / black-hole kills park the ship off-screen briefly, then respawn at **zero velocity**.
 
-Ships and shots **wrap** at the playfield edge. With a **red border** (black hole), ships **bounce** instead. The default rim is **black**.
+Ships and shots **wrap** at the playfield edge.  
+With a **red border** (black hole), ships **bounce** instead. The default rim is **black**.
 
 **Game over** when the timer hits **0:00** or the player has **no lives**. Play freezes; **GAME OVER** flashes (2 Hz, 50% duty) with **PUSH FIRE TO START** below.
 
