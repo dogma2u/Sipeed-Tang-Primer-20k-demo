@@ -30,18 +30,54 @@ Open that link to run the game in your browser (no install, no FPGA board). Attr
 
 ## Ships
 
-On the LCD, outlines match these roles:
-
-| Ship | Who | Outline on LCD |
-|------|-----|----------------|
-| **Diamond** | Player | Bright **green** |
-| **Wedge** | AI | Bright **yellow** |
-
-<p align="center">
-  <img src="docs/Diamond_Ship_1.png" alt="Diamond ship (player) — green outline on LCD" width="280" />
-  &nbsp;&nbsp;
-  <img src="docs/Wadge%20ship1.png" alt="Wedge ship (AI) — yellow outline on LCD" width="280" />
-</p>
+<table align="center">
+  <tr>
+    <td align="center" valign="middle">
+      <!-- Diamond (player) — from docs/Diamond ship.txt -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="-35 -35 70 70" role="img" aria-label="Diamond ship (player) — green outline on LCD" style="background-color:#000000">
+        <g transform="rotate(-90) scale(1.5)">
+          <polygon points="-10,0 -16,2.5 -20,0 -16,-2.5" fill="none" stroke="#f97316" stroke-width="0.8" />
+          <polygon points="14,0 4,7 -2,3 -14,8 -10,0 -14,-8 -2,-3 4,-7" fill="none" stroke="#22c55e" stroke-width="0.8" />
+          <line x1="-2" y1="3" x2="-10" y2="0" stroke="#22c55e" stroke-width="0.8" />
+          <line x1="-2" y1="-3" x2="-10" y2="0" stroke="#22c55e" stroke-width="0.8" />
+        </g>
+      </svg>
+    </td>
+    <td align="center" valign="middle">
+      <p align="center">On the LCD, outlines match these roles:</p>
+      <table align="center">
+        <thead>
+          <tr>
+            <th>Ship</th>
+            <th>Who</th>
+            <th>Outline on LCD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Diamond</strong></td>
+            <td>Player</td>
+            <td>Bright <strong>green</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Wedge</strong></td>
+            <td>AI</td>
+            <td>Bright <strong>yellow</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </td>
+    <td align="center" valign="middle">
+      <!-- Wedge (AI) — from docs/yellow ship.txt -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="-25 -25 50 50" role="img" aria-label="Wedge ship (AI) — yellow outline on LCD" style="background-color:#000000">
+        <g transform="rotate(-90) scale(1.5)">
+          <polygon points="-3,0 -7,2 -10,0 -7,-2" fill="none" stroke="#ef4444" stroke-width="0.8" />
+          <polygon points="14,0 -11,-9 -3,0 -11,9" fill="none" stroke="#eab308" stroke-width="0.8" />
+        </g>
+      </svg>
+    </td>
+  </tr>
+</table>
 
 <p align="center"><em>Left: Diamond (you). Right: Wedge (AI). Thrust flame is drawn from mid-hull in-game.</em></p>
 

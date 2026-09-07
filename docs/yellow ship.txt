@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vector Map Viewer</title>
+    <style>
+        body {
+            background-color: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        svg {
+            background: #000000;
+        }
+    </style>
+</head>
+<body>
+
+    <svg width="400" height="400" viewBox="-25 -25 50 50">
+        <!-- Rotated 90 deg CCW and scaled to 1.5x -->
+        <g transform="rotate(-90) scale(1.5)">
+            <!-- Flame from hitch (vertex 2: -3, 0) - Red Line Art -->
+            <polygon points="-3,0 -7,2 -10,0 -7,-2" 
+                     fill="none" 
+                     stroke="#ef4444" 
+                     stroke-width="0.8" />
+
+            <!-- Hull/Outline Polygon: 0-1-2-3-0 - Yellow Line Art -->
+            <polygon points="14,0 -11,-9 -3,0 -11,9" 
+                     fill="none" 
+                     stroke="#eab308" 
+                     stroke-width="0.8" />
+        </g>
+    </svg>
+
+</body>
+</html>
