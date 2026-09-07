@@ -200,7 +200,8 @@ Keep `sw_config.vh` on the FileList. See `docs/Gowin-copy-bsram.txt`.
 
 ## Synth snapshot (GW2A-18C)
 
-Latest Gowin report (DIP5 + timer 59:59 + finer `want_facing`). Full **Resource Usage Summary**, utilization, clocks, Fmax, and critical-path dump: [`FPGA_Data.text`](FPGA_Data.text).
+Latest Gowin report (DIP5 + timer 59:59 + finer `want_facing`).  
+Full **Resource Usage Summary**, utilization, clocks, Fmax, and critical-path dump: [`FPGA_Data.text`](FPGA_Data.text).
 
 | Resource | Usage | Utilization |
 |:--------:|:-----:|:-----------:|
