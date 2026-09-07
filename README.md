@@ -143,7 +143,8 @@ Pong-style **block digits** along the top:
 | Hit sun / wall bounce / wrap | — | — | — |
 
 A crash also separates the ships so it only scores once.  
-Deaths **vanish**, then respawn (AI always; player only if lives remain). Respawn can land anywhere (including on the sun) with **1.5 s** invulnerability. Sun / black-hole kills park the ship off-screen briefly, then respawn at **zero velocity**.
+Deaths **vanish**, then respawn (AI always; player only if lives remain).  
+Respawn can land anywhere (including on the sun) with **1.5 s** invulnerability. Sun / black-hole kills park the ship off-screen briefly, then respawn at **zero velocity**.
 
 Ships and shots **wrap** at the playfield edge. With a **red border** (black hole), ships **bounce** instead. The default rim is **black**.
 
