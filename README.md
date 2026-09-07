@@ -4,7 +4,7 @@
 
 <img src="docs/important-box.svg" alt="IMPORTANT: Game over - end of the line. This FPGA is full. GAME OVER. Thanks for flying." width="860" />
 
-Knobs: [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh)
+Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
 
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
