@@ -4,7 +4,7 @@ All notable changes to the Sipeed Tang Primer 20K Space Wars-style game.
 
 ## [1.01.DONE] - 2026-09-06
 
-**Final board release** for this GW2A-18 tree. FPGA is full (Logic ~93%, BSRAM 100%) — no room for menus, SSRAM, or SPI.
+**Final board release** for this GW2A-18 tree. FPGA is full (Logic ~93%, BSRAM 100%) — no room for menus, SDRAM (DDR3), or SPI.
 
 ### Added / changed (board-tested)
 - DIP5 attract test mode (pin T5): **up** = normal attract, **down** = test (fly Diamond, AI frozen; Fire shoots)

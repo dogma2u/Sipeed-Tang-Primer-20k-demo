@@ -5,7 +5,7 @@
 > [!IMPORTANT]
 > ### Game over — end of the line
 >
-> This FPGA is **full**. Logic is packed to the brim, **every BSRAM** is spoken for, and there is no room left for a menu system, SSRAM, or SPI.
+> This FPGA is **full**. Logic is packed to the brim, **every BSRAM** is spoken for, and there is no room left for a menu system, onboard **SDRAM** (DDR3), or SPI.
 >
 > The board game stops here. No bigger feature set on this chip — just the match you can play today.
 > Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
@@ -122,7 +122,7 @@ Ships and shots **wrap** at the playfield edge. With a **red border** (black hol
 
 **Modules:** `sw_physics.v` (AI, gravity, shots, scores, hyperspace), `sw_draw.v` (erase / stroke), `sw_scanout.v` (LCD composite). `space_wars.v` is thin glue plus shared `sin_cos` / `fb_ram`. Shot bank: **8** slots (player 0–4, AI 5–7). Gameplay knobs: `sw_config.vh` (see **Tweaking gameplay**).
 
-**Framebuffer:** 800×470 **2-bit** BRAM. Full 800×480×2 does not fit in 46 BSRAM, so the bottom 10 LCD lines stay black. One playfield page only; erase/redraw while physics frames may drop if draw is busy. FB writes are FF-pipelined (1 cycle).
+**Framebuffer:** 800×470 **2-bit** BSRAM. Full 800×480×2 does not fit in 46 BSRAM, so the bottom 10 LCD lines stay black. One playfield page only; erase/redraw while physics frames may drop if draw is busy. FB writes are FF-pipelined (1 cycle).
 
 **Sun:** Composited in scanout (not in the FB) as an orange circle at (400, 240), radius 18, in front of ships. Hitting the sun (or black-hole / restored-sun core) **costs a player life**. After **10 shots** hit the sun it becomes a **black hole** with **1/r²** pull and a **red border**. **5 player shots** into the hole restore the sun with outward **1/r²** push for **10 s**, then gravity clears.
 
@@ -148,7 +148,7 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 | `src/sw_draw.v` | Erase / stroke ships / shots |
 | `src/sw_scanout.v` | HUD, stars, sun, FB color → RGB |
 | `src/sw_config.vh` | Gameplay `` `define `` knobs |
-| `src/fb_ram.v` | 2-bit 800×470 BRAM |
+| `src/fb_ram.v` | 2-bit 800×470 BSRAM |
 | `src/sin_cos.v` | Quarter-wave sine / cosine |
 | `src/tang20k_lcd.cst` | Pin constraints |
 | `src/tang20k_lcd.sdc` | Clock constraint |
