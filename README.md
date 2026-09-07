@@ -1,8 +1,8 @@
+<div align="center">
+
 # Sipeed Tang Primer 20K — Space Wars
 
 ---
-
-<div align="center">
 
 > [!IMPORTANT]
 > ### Game over — end of the line
@@ -13,8 +13,6 @@
 > Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
 >
 > **GAME OVER.** Thanks for flying.
-
-</div>
 
 ---
 
@@ -69,13 +67,11 @@ Open that link to run the game in your browser (no install, no FPGA board). Attr
   </tr>
 </table>
 
-<p align="center"><em>Left: Diamond (you). Right: Wedge (AI). Thrust flame is drawn from mid-hull in-game.</em></p>
+*Left: Diamond (you). Right: Wedge (AI). Thrust flame is drawn from mid-hull in-game.*
 
 Hyperspace flashes the Diamond **red/green** for about 1.5 s. Shots render **white**.
 
 ## Hardware
-
-<div align="center">
 
 | Item | Used here |
 |:----:|:---------:|
@@ -85,13 +81,9 @@ Hyperspace flashes the Diamond **red/green** for about 1.5 s. Shots render **whi
 | Clock | 27 MHz on H11 → rPLL **33 MHz** pixel clock |
 | Tools | Gowin FPGA Designer (synthesize / program) |
 
-</div>
-
 **DIP1 down** enables the core (required for flash / run). **DIP5 up** = normal attract; **DIP5 down** = attract **test mode** (you fly the Diamond, AI frozen; Fire shoots instead of starting a match).
 
 Keys are active-low. Dock buttons and DIP2–5 use a **1.5 V** bank (`LVCMOS15`); LCD, clock, and reset use **3.3 V** (`LVCMOS33`).
-
-<div align="center">
 
 | Control | Pin | Action |
 |:-------:|:---:|:------:|
@@ -102,8 +94,6 @@ Keys are active-low. Dock buttons and DIP2–5 use a **1.5 V** bank (`LVCMOS15`)
 | S4 | C7 | Fire / start match |
 | DIP5 | T5 | Attract test when **down** (up = normal) |
 
-</div>
-
 FPGA reset is **PLL lock only** (no button reset). Hyperspace: vanish ~1 s → random warp → ~1.5 s red/green flash at ~10 Hz with spawn invulnerability.
 
 ## Tweaking gameplay
@@ -112,8 +102,6 @@ There is no in-game menu, but you can retune the match in [`fpga/tang20k_lcd/src
 
 Common knobs:
 
-<div align="center">
-
 | Define | What it does | Default (this tree) |
 |:------:|:------------:|:-------------------:|
 | `CFG_FUEL_MAX_MS` | Player thrust fuel budget (ms) | `15000` (15 s) |
@@ -121,8 +109,6 @@ Common knobs:
 | `CFG_TIMER_MAX` / `CFG_DEMO_TIMER` | Cap / attract wrap (`MM×100+SS`) | `5959` (59:59) |
 | `CFG_SHIP_MAXV` | Max ship speed (all modes) | `10` |
 | `CFG_PL_THRUST` | Player thrust strength | `60` |
-
-</div>
 
 Also nearby: lives (`CFG_LIFE_START` / `CFG_LIFE_MAX`), shot speed / magazine, sun and AI ramps. Keep timer fields as `MM×100+SS` with each part **0…59**. Extreme values can change feel a lot; synth/util usually stays similar if you only touch these numbers.
 
@@ -141,16 +127,12 @@ Pong-style **block digits** along the top:
 - Under the player score: **wedge life icons** (start 3, max 5). Every **5 AI kills** grants an extra life if under the cap
 - Beside the player score: a **vertical fuel bar** (**15 s** of thrust) — green, yellow at ≤10%, red at ≤5%. Empty fuel blocks thrust until respawn. The AI has unlimited lives
 
-<div align="center">
-
 | Event | Player | AI | Timer |
 |:-----:|:------:|:--:|:-----:|
 | Your shot destroys the AI | +1 | — | +5 s |
 | AI shot destroys you | — | +1 | +5 s |
 | Ships crash | −1 | −1 | — |
 | Hit sun / wall bounce / wrap | — | — | — |
-
-</div>
 
 A crash also separates the ships so it only scores once. Deaths **vanish**, then respawn (AI always; player only if lives remain). Respawn can land anywhere (including on the sun) with **1.5 s** invulnerability. Sun / black-hole kills park the ship off-screen briefly, then respawn at **zero velocity**.
 
@@ -180,8 +162,6 @@ Per-frame flow (simplified): physics → collisions / sun / shots → erase old 
 
 Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj)
 
-<div align="center">
-
 | File | Role |
 |:----:|:----:|
 | `src/top.v` | Glue: PLL, LCD, game, buttons, DIP5 |
@@ -197,8 +177,6 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 | `src/tang20k_lcd.cst` | Pin constraints |
 | `src/tang20k_lcd.sdc` | Clock constraint |
 
-</div>
-
 ## Build
 
 1. Open `fpga/tang20k_lcd/tang20k_lcd.gprj` in Gowin FPGA Designer.
@@ -211,8 +189,6 @@ If you keep a separate Gowin tree, copy all of `fpga/tang20k_lcd/src/*.v` **and*
 
 Latest Gowin report (DIP5 + timer 59:59 + finer `want_facing`). Full **Resource Usage Summary**, utilization, clocks, Fmax, and critical-path dump: [`FPGA_Data.text`](FPGA_Data.text).
 
-<div align="center">
-
 | Resource | Usage | Utilization |
 |:--------:|:-----:|:-----------:|
 | Logic | 19266 (14647 LUT + 4079 ALU + 90 RAM16) / 20736 | **93%** |
@@ -222,10 +198,10 @@ Latest Gowin report (DIP5 + timer 59:59 + finer `want_facing`). Full **Resource 
 | I/O | 28 | — |
 | Clock | rPLL 27 MHz → 33 MHz pixel | — |
 
-</div>
-
 **Timing (not met):** constrained **33 MHz**; reported Fmax **~8.0 MHz** (~127 logic levels on the pixel clock). The design **fits** and has been **board-tested**, but static timing does not close at 33 MHz — treat that as a known limit of this tree. See Path 1 in [`FPGA_Data.text`](FPGA_Data.text) (`lfsr` → `vel0_y`, slack **−94.962**).
 
 ## License
 
 MIT — see [LICENSE](LICENSE). Demo / student project; no warranty.
+
+</div>
