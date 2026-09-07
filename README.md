@@ -4,15 +4,26 @@
 
 ---
 
-> [!IMPORTANT]
-> ### Game over — end of the line
->
-> This FPGA is **full**. Logic is packed to the brim, **every BSRAM** is spoken for, and there is no room left for a menu system, onboard **SDRAM** (DDR3), or SPI.
->
-> The board game stops here. No bigger feature set on this chip — just the match you can play today.
-> Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
->
-> **GAME OVER.** Thanks for flying.
+<table align="center">
+  <tr>
+    <td width="6" bgcolor="#ab7df8">&nbsp;</td>
+    <td align="center">
+
+**IMPORTANT**
+
+### Game over — end of the line
+
+This FPGA is **full**. Logic is packed to the brim, **every BSRAM** is spoken for, and there is no room left for a menu system, onboard **SDRAM** (DDR3), or SPI.
+
+The board game stops here. No bigger feature set on this chip — just the match you can play today.
+Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
+
+**GAME OVER.** Thanks for flying.
+
+</td>
+    <td width="6" bgcolor="#ab7df8">&nbsp;</td>
+  </tr>
+</table>
 
 ---
 
