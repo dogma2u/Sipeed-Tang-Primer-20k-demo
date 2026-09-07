@@ -8,7 +8,6 @@ module sw_scanout (
     input  wire [9:0] pix_y,
     input  wire [1:0] rdata,
     input  wire       black_hole,
-    input  wire       green_sun,
     input  wire       game_over,
     input  wire       await_start,
     input  wire [5:0] frame_cnt,
@@ -30,7 +29,9 @@ localparam integer FB_H   = 470;
 localparam integer SUN_R  = 18;
 localparam [11:0] STAR_MAP_W    = 12'd3200;
 localparam [8:0]  STAR_MAP_H    = 9'd470;
-localparam [11:0] STAR_PAN_STEP = 12'd1; // half prior rate (was 2)
+// Base drift was 1 map px/frame. Speed Q8.8: 256=1x, 512=2x, 128=0.5x (2x slower).
+// Off-axis (not L/R/U/D or 45deg) uses 4x that picked speed.
+localparam [15:0] STAR_SPD_1X   = 16'd256;
 `include "star_field_rom.vh"
 localparam integer FUEL_MAX_MS    = 15000;
 localparam integer FUEL_YEL_MS    = 1500;
@@ -351,16 +352,31 @@ function push_fire_text;
     end
 endfunction
 
-// Star overlay: 3200x470 map, 90deg window; random L/R/U/D (diagonals OK).
+// Star overlay: 3200x470 map; any-angle drift; speed 0.5x..2x (4x if not cardinal/45).
 wire        in_fb = de_now && (pix_x < FB_W) && (pix_y < FB_H);
 reg         in_fb_d;
 reg [9:0]   pix_x_d, pix_y_d;
 reg [11:0]  star_pan_x;
 reg [8:0]   star_pan_y;
-reg [1:0]   star_dx; // 01=+1, 11=-1, 00=0
-reg [1:0]   star_dy;
+reg [7:0]   star_ang;
+reg [15:0]  star_spd;      // Q8.8 px/frame (128..512; up to 2048 off-axis)
+reg signed [15:0] star_acc_x; // Q8.8 fractional accum
+reg signed [15:0] star_acc_y;
 reg [15:0]  star_dir_tmr;
 reg [15:0]  star_lfsr;
+
+wire signed [15:0] star_sin;
+wire signed [15:0] star_cos;
+sin_cos u_star_sc (
+    .angle(star_ang),
+    .sin_val(star_sin),
+    .cos_val(star_cos)
+);
+
+// Latched vx/vy: mul only on dir reload (DSP), then FF hold
+reg signed [15:0] star_vx_r;
+reg signed [15:0] star_vy_r;
+reg               star_vel_load;
 
 wire [12:0] star_sum_x = {3'b0, pix_x_d} + {1'b0, star_pan_x};
 wire [11:0] star_mx    = (star_sum_x >= 13'd3200) ?
@@ -383,7 +399,6 @@ reg [9:0]  fuel_fill_h_r;
 reg        go_flash_r;
 reg        pl_hs_flash_r, pl_flash_red_r;
 reg        black_hole_r;
-reg        green_sun_r;
 reg [2:0]  lives0_r;
 reg [13:0] timer_sec_r;
 reg [14:0] fuel_ms_r;
@@ -393,57 +408,80 @@ always @(posedge clk) begin
     pix_x_d <= pix_x;
     pix_y_d <= pix_y;
 
-    // Once per FB frame: step pan, maybe pick new direction
+    // Once per FB frame: accumulate any-angle velocity into pan
     if (de_now && (pix_x == 10'd799) && (pix_y == 10'd469)) begin
-        // LFSR; force non-zero seed if powered up cleared
-        if (star_lfsr == 16'd0)
-            star_lfsr <= 16'hACE1;
-        else
-            star_lfsr <= {star_lfsr[14:0],
-                          star_lfsr[15] ^ star_lfsr[13] ^
-                          star_lfsr[12] ^ star_lfsr[10]};
+        begin : star_step
+            reg signed [15:0] nax, nay, sx, sy;
+            reg signed [16:0] tx, ty;
 
-        // Horizontal: 01 = +step, 11 = -step
-        if (star_dx == 2'b01) begin
-            if ((star_pan_x + STAR_PAN_STEP) >= STAR_MAP_W)
-                star_pan_x <= (star_pan_x + STAR_PAN_STEP) - STAR_MAP_W;
+            if (star_lfsr == 16'd0)
+                star_lfsr <= 16'hACE1;
             else
-                star_pan_x <= star_pan_x + STAR_PAN_STEP;
-        end else if (star_dx == 2'b11) begin
-            if (star_pan_x < STAR_PAN_STEP)
-                star_pan_x <= STAR_MAP_W - (STAR_PAN_STEP - star_pan_x);
-            else
-                star_pan_x <= star_pan_x - STAR_PAN_STEP;
-        end
+                star_lfsr <= {star_lfsr[14:0],
+                              star_lfsr[15] ^ star_lfsr[13] ^
+                              star_lfsr[12] ^ star_lfsr[10]};
 
-        // Vertical
-        if (star_dy == 2'b01) begin
-            if ((star_pan_y + STAR_PAN_STEP[8:0]) >= STAR_MAP_H)
-                star_pan_y <= (star_pan_y + STAR_PAN_STEP[8:0]) - STAR_MAP_H;
-            else
-                star_pan_y <= star_pan_y + STAR_PAN_STEP[8:0];
-        end else if (star_dy == 2'b11) begin
-            if (star_pan_y < STAR_PAN_STEP[8:0])
-                star_pan_y <= STAR_MAP_H - (STAR_PAN_STEP[8:0] - star_pan_y);
-            else
-                star_pan_y <= star_pan_y - STAR_PAN_STEP[8:0];
-        end
+            // Reload latched vel after ang/spd settle (sin_cos combo from regs)
+            if (star_vel_load) begin : star_vel_mul
+                (* use_dsp = "yes" *) reg signed [31:0] vxp;
+                (* use_dsp = "yes" *) reg signed [31:0] vyp;
+                vxp = star_cos * $signed({1'b0, star_spd});
+                vyp = star_sin * $signed({1'b0, star_spd});
+                star_vx_r     <= vxp[23:8];
+                star_vy_r     <= vyp[23:8];
+                star_vel_load <= 1'b0;
+            end
 
-        // Random hold ~2..7 s, then new direction (cardinal or diagonal)
-        if (star_dir_tmr == 16'd0) begin
-            star_dir_tmr <= 16'd100 + {8'd0, star_lfsr[7:0]};
-            case (star_lfsr[3:0])
-                4'd0,  4'd8:  begin star_dx <= 2'b01; star_dy <= 2'b00; end
-                4'd1,  4'd9:  begin star_dx <= 2'b11; star_dy <= 2'b00; end
-                4'd2,  4'd10: begin star_dx <= 2'b00; star_dy <= 2'b01; end
-                4'd3,  4'd11: begin star_dx <= 2'b00; star_dy <= 2'b11; end
-                4'd4,  4'd12: begin star_dx <= 2'b01; star_dy <= 2'b01; end
-                4'd5,  4'd13: begin star_dx <= 2'b01; star_dy <= 2'b11; end
-                4'd6,  4'd14: begin star_dx <= 2'b11; star_dy <= 2'b01; end
-                default:      begin star_dx <= 2'b11; star_dy <= 2'b11; end
-            endcase
-        end else begin
-            star_dir_tmr <= star_dir_tmr - 16'd1;
+            nax = star_acc_x + star_vx_r;
+            nay = star_acc_y + star_vy_r;
+            sx  = nax >>> 8;
+            sy  = nay >>> 8;
+            star_acc_x <= nax - (sx <<< 8);
+            star_acc_y <= nay - (sy <<< 8);
+
+            tx = $signed({1'b0, star_pan_x}) + sx;
+            if (tx < 0)
+                tx = tx + 17'sd3200;
+            else if (tx >= 17'sd3200)
+                tx = tx - 17'sd3200;
+            star_pan_x <= tx[11:0];
+
+            ty = $signed({1'b0, star_pan_y}) + sy;
+            if (ty < 0)
+                ty = ty + 17'sd470;
+            else if (ty >= 17'sd470)
+                ty = ty - 17'sd470;
+            star_pan_y <= ty[8:0];
+
+            // New angle + speed every ~2..7 s
+            if (star_dir_tmr == 16'd0) begin
+                begin : star_dir_pick
+                    reg [7:0]  nang;
+                    reg [15:0] nspd;
+                    star_dir_tmr <= 16'd100 + {8'd0, star_lfsr[7:0]};
+                    nang = star_lfsr[15:8];
+                    star_ang <= nang;
+                    case (star_lfsr[6:4])
+                        3'd0: nspd = 16'd128;  // 0.5x (2x slower)
+                        3'd1: nspd = 16'd160;
+                        3'd2: nspd = 16'd192;
+                        3'd3: nspd = 16'd224;
+                        3'd4: nspd = STAR_SPD_1X; // 1x
+                        3'd5: nspd = 16'd320;
+                        3'd6: nspd = 16'd384;
+                        default: nspd = 16'd512; // 2x faster
+                    endcase
+                    // Angle units: 256=360deg. Multiples of 32 = L/R/U/D + 45s.
+                    // Any other heading: 4x that speed.
+                    if (nang[4:0] == 5'd0)
+                        star_spd <= nspd;
+                    else
+                        star_spd <= nspd << 2;
+                    star_vel_load <= 1'b1;
+                end
+            end else begin
+                star_dir_tmr <= star_dir_tmr - 16'd1;
+            end
         end
     end
 
@@ -462,7 +500,6 @@ always @(posedge clk) begin
         reg [14:0] fuel_px;
 
         black_hole_r   <= black_hole;
-        green_sun_r    <= green_sun;
         lives0_r       <= lives0;
         timer_sec_r    <= timer_sec;
         fuel_ms_r      <= fuel_ms;
@@ -528,6 +565,7 @@ always @(posedge clk) begin
     end
 end
 
+// Round sun / BH (r^2)
 wire signed [15:0] sdx_d = $signed({6'b0, pix_x_d}) - 16'sd400;
 wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
@@ -573,16 +611,7 @@ always @(posedge clk) begin
     end else if (in_fb_d && pf_hit) begin
         pix_r <= 5'h00; pix_g <= 6'h3F; pix_b <= 5'h00; // bright green
     end else if (in_sun) begin
-        if (green_sun_r) begin
-            // Secret green sun (unlock via player shots -- not documented in README)
-            if (srr_d < 32'sd80) begin
-                pix_r <= 5'h04; pix_g <= 6'h3F; pix_b <= 5'h04;
-            end else if (srr_d < 32'sd200) begin
-                pix_r <= 5'h02; pix_g <= 6'h30; pix_b <= 5'h02;
-            end else begin
-                pix_r <= 5'h00; pix_g <= 6'h20; pix_b <= 5'h00;
-            end
-        end else if (srr_d < 32'sd80) begin
+        if (srr_d < 32'sd80) begin
             pix_r <= 5'h1F; pix_g <= 6'h30; pix_b <= 5'h04;
         end else if (srr_d < 32'sd200) begin
             pix_r <= 5'h1E; pix_g <= 6'h24; pix_b <= 5'h02;

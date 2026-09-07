@@ -1,6 +1,7 @@
 // Tang Primer 20K Dock + 5" LCD -- Space Wars-style (sun + gravity + thrust)
 //
-// DIP switch 1 down. Controls (active-low):
+// DIP1 down = core enable (required). DIP5 up = attract test mode (down = normal).
+// Controls (active-low):
 //   S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace
 //   Diamond = you; wedge = AI
 //   Reset = PLL lock only (S0 is NOT board reset)
@@ -12,6 +13,7 @@ module top (
     input  wire       btn_right_n,
     input  wire       btn_thrust_n,
     input  wire       btn_fire_n,
+    input  wire       dip5_n,
     output wire       lcd_clk,
     output wire       lcd_hsync,
     output wire       lcd_vsync,
@@ -72,6 +74,7 @@ space_wars u_game (
     .btn_thrust_n(btn_thrust_n),
     .btn_fire_n(btn_fire_n),
     .btn_hyper_n(btn_hyper_n),
+    .dip5_n(dip5_n),
     .pix_x(pix_x),
     .pix_y(pix_y),
     .de_now(de_now),

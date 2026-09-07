@@ -61,7 +61,7 @@ localparam [1:0] COL_SHOT = 2'b11;
 
 function signed [15:0] mul_q88;
     input signed [15:0] a, b;
-    reg signed [31:0] p;
+    (* use_dsp = "yes" *) reg signed [31:0] p;
     begin
         p = a * b;
         mul_q88 = $signed(p[23:8]);
@@ -149,6 +149,9 @@ reg [4:0]  si;
 reg [4:0]  nvert;
 reg [4:0]  nedge;
 reg [4:0]  hitch;
+reg        xf_ph; // 0: two muls (lx*cos, ly*sin); 1: two muls + write vert
+reg signed [15:0] xf_lx, xf_ly, xf_px, xf_py;
+reg signed [15:0] xf_m0, xf_m1; // ph0 products
 
 reg signed [15:0] b_x, b_y, b_dx, b_dy, b_sx, b_sy, b_err, end_x, end_y;
 reg        [12:0] line_steps; // abort runaway lines (wrap / bad verts)
@@ -373,6 +376,7 @@ task route_draw;
     begin
         vi <= 5'd0;
         si <= 5'd0;
+        xf_ph <= 1'b0;
         shot_phase <= 1'b0;
         line_active <= 1'b0;
         if (d_pos0_x[23]) begin
@@ -557,25 +561,37 @@ always @(posedge clk or negedge rst_n) begin
             end
 
             ST_XFORM: begin
-                begin : xfv
-                    reg signed [7:0] tx, ty;
-                    reg signed [15:0] lx, ly;
-                    reg signed [23:0] px, py;
-                    tx = shp_x(ship_sel, vi);
-                    ty = shp_y(ship_sel, vi);
-                    lx = {{8{tx[7]}}, tx};
-                    ly = {{8{ty[7]}}, ty};
-                    px = ship_sel ? d_pos1_x : d_pos0_x;
-                    py = ship_sel ? d_pos1_y : d_pos0_y;
-                    sxv[vi] <= $signed(px[23:8]) + mul_q88(lx, cos_a) - mul_q88(ly, sin_a);
-                    syv[vi] <= $signed(py[23:8]) + mul_q88(lx, sin_a) + mul_q88(ly, cos_a);
+                // Two clocks per vertex: max 2 parallel muls (prefer DSP pair)
+                if (!xf_ph) begin
+                    begin : xf0
+                        reg signed [7:0]  tx, ty;
+                        reg signed [15:0] lx, ly;
+                        reg signed [23:0] px, py;
+                        tx = shp_x(ship_sel, vi);
+                        ty = shp_y(ship_sel, vi);
+                        lx = {{8{tx[7]}}, tx};
+                        ly = {{8{ty[7]}}, ty};
+                        px = ship_sel ? d_pos1_x : d_pos0_x;
+                        py = ship_sel ? d_pos1_y : d_pos0_y;
+                        xf_lx <= lx;
+                        xf_ly <= ly;
+                        xf_px <= px[23:8];
+                        xf_py <= py[23:8];
+                        xf_m0 <= mul_q88(lx, cos_a); // lx*cos
+                        xf_m1 <= mul_q88(ly, sin_a); // ly*sin
+                    end
+                    xf_ph <= 1'b1;
+                end else begin
+                    sxv[vi] <= xf_px + xf_m0 - xf_m1;
+                    syv[vi] <= xf_py + mul_q88(xf_lx, sin_a) + mul_q88(xf_ly, cos_a);
+                    xf_ph <= 1'b0;
+                    if (vi == (nvert - 5'd1)) begin
+                        ei <= 5'd0;
+                        line_active <= 1'b0;
+                        state <= ST_SHIP;
+                    end else
+                        vi <= vi + 5'd1;
                 end
-                if (vi == (nvert - 5'd1)) begin
-                    ei <= 5'd0;
-                    line_active <= 1'b0;
-                    state <= ST_SHIP;
-                end else
-                    vi <= vi + 5'd1;
             end
 
             ST_SHIP: begin
@@ -610,18 +626,19 @@ always @(posedge clk or negedge rst_n) begin
 
             ST_FLAME: begin
                 if (!line_active) begin
-                    if (!ship_sel) begin
+                    begin : flm
+                        reg signed [15:0] fdx, fdy;
+                        fdx = mul_q88(cos_a, 16'sd10);
+                        fdy = mul_q88(sin_a, 16'sd10);
                         start_line(sxv[hitch], syv[hitch],
-                            sxv[hitch] - mul_q88(cos_a, 16'sd10),
-                            syv[hitch] - mul_q88(sin_a, 16'sd10));
-                        pflame0_x <= sxv[hitch] - mul_q88(cos_a, 16'sd10);
-                        pflame0_y <= syv[hitch] - mul_q88(sin_a, 16'sd10);
-                    end else begin
-                        start_line(sxv[hitch], syv[hitch],
-                            sxv[hitch] - mul_q88(cos_a, 16'sd10),
-                            syv[hitch] - mul_q88(sin_a, 16'sd10));
-                        pflame1_x <= sxv[hitch] - mul_q88(cos_a, 16'sd10);
-                        pflame1_y <= syv[hitch] - mul_q88(sin_a, 16'sd10);
+                            sxv[hitch] - fdx, syv[hitch] - fdy);
+                        if (!ship_sel) begin
+                            pflame0_x <= sxv[hitch] - fdx;
+                            pflame0_y <= syv[hitch] - fdy;
+                        end else begin
+                            pflame1_x <= sxv[hitch] - fdx;
+                            pflame1_y <= syv[hitch] - fdy;
+                        end
                     end
                     line_active <= 1'b1;
                     plot_col <= ship_sel ? COL_AI : COL_PL;
@@ -671,6 +688,7 @@ always @(posedge clk or negedge rst_n) begin
                         nvert    <= 5'd4;
                         nedge    <= 5'd4;
                         hitch    <= 5'd2;
+                        xf_ph    <= 1'b0;
                         state    <= ST_XFORM;
                     end
                 end else begin

@@ -1,5 +1,5 @@
 // Space Wars glue: physics + draw + scanout + FB + shared sin_cos.
-// Controls: S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace
+// Controls: S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace | DIP5 test
 
 module space_wars (
     input  wire       clk,
@@ -10,6 +10,7 @@ module space_wars (
     input  wire       btn_thrust_n,
     input  wire       btn_fire_n,
     input  wire       btn_hyper_n,
+    input  wire       dip5_n,
     input  wire [9:0] pix_x,
     input  wire [9:0] pix_y,
     input  wire       de_now,
@@ -46,7 +47,7 @@ wire        [5:0]  frame_cnt;
 wire        [2:0]  lives0;
 wire        [14:0] fuel_ms;
 wire               black_hole;
-wire               green_sun;
+wire               border_red;
 wire               pl_flash_red;
 wire               pl_hs_flash;
 
@@ -128,6 +129,7 @@ sw_physics u_phys (
     .btn_thrust_n(btn_thrust_n),
     .btn_fire_n(btn_fire_n),
     .btn_hyper_n(btn_hyper_n),
+    .dip5_n(dip5_n),
     .sin_a(sin_a),
     .cos_a(cos_a),
     .sc_sel(phys_sc_sel),
@@ -166,7 +168,6 @@ sw_physics u_phys (
     .lives0(lives0),
     .fuel_ms(fuel_ms),
     .black_hole(black_hole),
-    .green_sun(green_sun),
     .border_red(border_red),
     .pl_flash_red(pl_flash_red),
     .pl_hs_flash(pl_hs_flash)
@@ -220,7 +221,6 @@ sw_scanout u_scan (
     .pix_y(pix_y),
     .rdata(rdata),
     .black_hole(black_hole),
-    .green_sun(green_sun),
     .game_over(game_over),
     .await_start(await_start),
     .frame_cnt(frame_cnt),
