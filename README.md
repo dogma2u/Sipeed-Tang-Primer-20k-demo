@@ -6,7 +6,9 @@
 
 <table align="center">
   <tr>
-    <td width="14" bgcolor="#ab7df8">&nbsp;&nbsp;</td>
+    <td valign="middle">
+      <img src="docs/important-bar.svg" width="16" height="240" alt="" />
+    </td>
     <td align="center">
 
 **IMPORTANT**
@@ -21,7 +23,9 @@ Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/s
 **GAME OVER.** Thanks for flying.
 
 </td>
-    <td width="14" bgcolor="#ab7df8">&nbsp;&nbsp;</td>
+    <td valign="middle">
+      <img src="docs/important-bar.svg" width="16" height="240" alt="" />
+    </td>
   </tr>
 </table>
 
