@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="860" height="280" viewBox="0 0 860 280">
   <rect x="6" y="6" width="848" height="268" fill="#0d1117" stroke="#79b8ff" stroke-width="10" rx="6"/>
-  <text x="430" y="48" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">IMPORTANT</text>
+  <text x="430" y="48" text-anchor="middle" fill="#ff2020" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">IMPORTANT</text>
   <text x="430" y="88" text-anchor="middle" fill="#f0f6fc" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="26" font-weight="700">Game over - end of the line</text>
   <text x="430" y="130" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">This FPGA is full. Logic is packed to the brim, every BSRAM is spoken for,</text>
   <text x="430" y="152" text-anchor="middle" fill="#c9d1d9" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">and there is no room left for a menu system, onboard SDRAM (DDR3), or SPI.</text>
