@@ -2,14 +2,12 @@
 
 # Sipeed Tang Primer 20K — Space Wars
 
----
-
-<table align="center">
+<table align="center" cellpadding="8" cellspacing="0" bgcolor="#ab7df8">
   <tr>
-    <td valign="middle">
-      <img src="docs/important-bar.svg" width="16" height="240" alt="" />
-    </td>
-    <td align="center">
+    <td>
+      <table align="center" cellpadding="20" cellspacing="0" bgcolor="#0d1117" width="100%">
+        <tr>
+          <td align="center">
 
 **IMPORTANT**
 
@@ -23,13 +21,11 @@ Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/s
 **GAME OVER.** Thanks for flying.
 
 </td>
-    <td valign="middle">
-      <img src="docs/important-bar.svg" width="16" height="240" alt="" />
+        </tr>
+      </table>
     </td>
   </tr>
 </table>
-
----
 
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
