@@ -31,7 +31,7 @@ Do **not** treat GitHub `main` as this baseline unless it matches this branch.
 
 ### Modules
 - `sw_physics.v` -- AI, gravity, shots, scores, hyperspace, attract
-- `sw_draw.v` -- erase / stroke (no boom X)
+- `sw_draw.v` -- erase / stroke
 - `sw_scanout.v` -- HUD / stars / sun / FB ink; HUD fields latched in FFs
 - `space_wars.v` -- glue; FB **write** path FF-pipelined (1 cycle); read addr combo
 - `sw_config.vh` -- `` `define `` knobs; **include + FileList**
@@ -41,7 +41,7 @@ Do **not** treat GitHub `main` as this baseline unless it matches this branch.
 - Diamond (player) vs yellow AI wedge
 - Attract: both AI; Diamond hunts; timer wrap 00:00 -> 99:99; PUSH FIRE TO START
 - Match timer MM*100+SS starts 01:30
-- Vanish deaths (no boom X); spawn invuln 1.5 s
+- Vanish deaths; spawn invuln 1.5 s
 - S0 hyperspace: vanish / warp / red-green flash + invuln
 - Shot bank 8 (player 0-4, AI 5-7)
 - Demo: turn step 4 every frame; DEMO_THRUST = top thrust * 1.5; SHIP_MAXV clamp 21
@@ -77,7 +77,6 @@ ASCII-only in `.v` / `.vh` comments (Education parser).
 - DDR3 playfield buffering (attempted then abandoned; local sources removed)
 - Death segment-drift / breakup anim (tried scanout-only; no visible change on board; reverted)
 - Nacelles, AI L/C/R guns, button debounce (skipped)
-- Boom X death anim
 
 ## Notes for DDR3 (parked)
 - SOM has 128 MB DDR3 -- capacity OK for multi-page FB

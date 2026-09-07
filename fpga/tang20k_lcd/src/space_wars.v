@@ -1,5 +1,5 @@
 // Space Wars glue: physics + draw + scanout + FB + shared sin_cos.
-// Controls: S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace
+// Controls: S1 left | S2 right | S3 thrust | S4 fire | S0 hyperspace | DIP5 test
 
 module space_wars (
     input  wire       clk,
@@ -10,6 +10,7 @@ module space_wars (
     input  wire       btn_thrust_n,
     input  wire       btn_fire_n,
     input  wire       btn_hyper_n,
+    input  wire       dip5_n,
     input  wire [9:0] pix_x,
     input  wire [9:0] pix_y,
     input  wire       de_now,
@@ -46,6 +47,7 @@ wire        [5:0]  frame_cnt;
 wire        [2:0]  lives0;
 wire        [14:0] fuel_ms;
 wire               black_hole;
+wire               border_red;
 wire               pl_flash_red;
 wire               pl_hs_flash;
 
@@ -127,6 +129,7 @@ sw_physics u_phys (
     .btn_thrust_n(btn_thrust_n),
     .btn_fire_n(btn_fire_n),
     .btn_hyper_n(btn_hyper_n),
+    .dip5_n(dip5_n),
     .sin_a(sin_a),
     .cos_a(cos_a),
     .sc_sel(phys_sc_sel),
@@ -212,6 +215,7 @@ sw_draw u_draw (
 
 sw_scanout u_scan (
     .clk(clk),
+    .frame_start(frame_start),
     .de_now(de_now),
     .pix_x(pix_x),
     .pix_y(pix_y),

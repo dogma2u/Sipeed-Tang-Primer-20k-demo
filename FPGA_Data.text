@@ -1,0 +1,396 @@
+Space Wars — Gowin FPGA report snapshot (GW2A-18C / Tang Primer 20K)
+Board-tested tree: DIP5 test mode + timer 59:59 + finer AI want_facing
+
+==============================================================================
+Resource Usage Summary
+==============================================================================
+Resource	Usage
+I/O Port	28
+I/O Buf	28
+    IBUF	7
+    OBUF	21
+Register	2244
+    DFF	91
+    DFFE	664
+    DFFS	18
+    DFFSE	8
+    DFFR	24
+    DFFRE	20
+    DFFP	84
+    DFFPE	20
+    DFFC	241
+    DFFCE	1074
+LUT	14625
+    LUT2	1081
+    LUT3	5411
+    LUT4	8133
+ALU	4079
+    ALU	4079
+SSRAM	90
+    RAM16S4	18
+    RAM16SDP4	72
+INV	22
+    INV	22
+DSP	
+    MULT18X18	11
+    MULTADDALU18X18	5
+BSRAM	46
+    SDPB	46
+CLOCK	1
+    rPLL	1
+
+==============================================================================
+Resource Utilization Summary
+==============================================================================
+Resource	Usage	Utilization
+Logic	19266(14647 LUT, 4079 ALU, 90 RAM16) / 20736	93%
+Register	2244 / 16173	14%
+  --Register as Latch	0 / 16173	0%
+  --Register as FF	2244 / 16173	14%
+BSRAM	46 / 46	100%
+
+==============================================================================
+Timing
+==============================================================================
+Clock Summary:
+Clock Name	Type	Period	Frequency(MHz)	Rise	Fall	Source	Master	Object
+sys_clk	Base	37.037	27.0	0.000	18.519			sys_clk_ibuf/I
+u_pll/rpll_inst/CLKOUT.default_gen_clk	Generated	30.303	33.0	0.000	15.152	sys_clk_ibuf/I	sys_clk	u_pll/rpll_inst/CLKOUT
+u_pll/rpll_inst/CLKOUTP.default_gen_clk	Generated	30.303	33.0	0.000	15.152	sys_clk_ibuf/I	sys_clk	u_pll/rpll_inst/CLKOUTP
+u_pll/rpll_inst/CLKOUTD.default_gen_clk	Generated	60.606	16.5	0.000	30.303	sys_clk_ibuf/I	sys_clk	u_pll/rpll_inst/CLKOUTD
+u_pll/rpll_inst/CLKOUTD3.default_gen_clk	Generated	90.909	11.0	0.000	45.455	sys_clk_ibuf/I	sys_clk	u_pll/rpll_inst/CLKOUTD3
+
+Max Frequency Summary:
+No.	Clock Name	Constraint	Actual Fmax	Logic Level	Entity
+1	u_pll/rpll_inst/CLKOUT.default_gen_clk	33.000(MHz)	7.983(MHz)	127	TOP
+
+==============================================================================
+Detail Timing Paths Information
+==============================================================================
+Path 1
+Path Summary:
+Slack	-94.962
+Data Arrival Time	126.090
+Data Required Time	31.128
+From	u_game/u_phys/lfsr_1_s0
+To	u_game/u_phys/vel0_y_1_s1
+Launch Clk	u_pll/rpll_inst/CLKOUT.default_gen_clk[R]
+Latch Clk	u_pll/rpll_inst/CLKOUT.default_gen_clk[R]
+Data Arrival Path:
+AT	DELAY	TYPE	RF	FANOUT	NODE
+0.000	0.000				u_pll/rpll_inst/CLKOUT.default_gen_clk
+0.500	0.500	tCL	RR	2434	u_pll/rpll_inst/CLKOUT
+0.860	0.360	tNET	RR	1	u_game/u_phys/lfsr_1_s0/CLK
+1.092	0.232	tC2Q	RF	41	u_game/u_phys/lfsr_1_s0/Q
+1.566	0.474	tNET	FF	1	u_game/u_phys/pos0_x_10_s10/I1
+2.121	0.555	tINS	FF	3	u_game/u_phys/pos0_x_10_s10/F
+2.595	0.474	tNET	FF	1	u_game/u_phys/pos0_x_Z_10_s/I2
+3.048	0.453	tINS	FF	24	u_game/u_phys/pos0_x_Z_10_s/F
+3.522	0.474	tNET	FF	1	u_game/u_phys/n2289_s1/I1
+4.077	0.555	tINS	FF	10	u_game/u_phys/n2289_s1/F
+4.551	0.474	tNET	FF	1	u_game/u_phys/n4549_s9/I0
+5.068	0.517	tINS	FF	3	u_game/u_phys/n4549_s9/F
+5.542	0.474	tNET	FF	1	u_game/u_phys/n2287_s1/I0
+6.059	0.517	tINS	FF	6	u_game/u_phys/n2287_s1/F
+6.533	0.474	tNET	FF	1	u_game/u_phys/n2280_s1/I0
+7.050	0.517	tINS	FF	9	u_game/u_phys/n2280_s1/F
+7.524	0.474	tNET	FF	1	u_game/u_phys/n2279_s11/I1
+8.079	0.555	tINS	FF	8	u_game/u_phys/n2279_s11/F
+8.553	0.474	tNET	FF	1	u_game/u_phys/n4541_s6/I1
+9.108	0.555	tINS	FF	4	u_game/u_phys/n4541_s6/F
+9.582	0.474	tNET	FF	127	u_game/u_phys/add_6779_s3/B0[13]
+13.362	3.780	tINS	FF	30	u_game/u_phys/add_6779_s3/DOUT[12]
+13.836	0.474	tNET	FF	1	u_game/u_phys/n148_s16/I1
+14.391	0.555	tINS	FF	1	u_game/u_phys/n148_s16/F
+14.865	0.474	tNET	FF	1	u_game/u_phys/n148_s8/I1
+15.420	0.555	tINS	FF	3	u_game/u_phys/n148_s8/F
+15.894	0.474	tNET	FF	1	u_game/u_phys/n148_s19/I0
+16.411	0.517	tINS	FF	88	u_game/u_phys/n148_s19/F
+16.885	0.474	tNET	FF	1	u_game/u_phys/n9450_s2/I1
+17.440	0.555	tINS	FF	40	u_game/u_phys/n9450_s2/F
+17.914	0.474	tNET	FF	2	u_game/u_phys/n1885_s0/I1
+18.484	0.570	tINS	FR	1	u_game/u_phys/n1885_s0/COUT
+18.484	0.000	tNET	RR	2	u_game/u_phys/n1884_s0/CIN
+18.519	0.035	tINS	RF	1	u_game/u_phys/n1884_s0/COUT
+18.519	0.000	tNET	FF	2	u_game/u_phys/n1883_s0/CIN
+18.554	0.035	tINS	FF	1	u_game/u_phys/n1883_s0/COUT
+18.554	0.000	tNET	FF	2	u_game/u_phys/n1882_s0/CIN
+18.589	0.035	tINS	FF	1	u_game/u_phys/n1882_s0/COUT
+18.589	0.000	tNET	FF	2	u_game/u_phys/n1881_s0/CIN
+18.625	0.035	tINS	FF	1	u_game/u_phys/n1881_s0/COUT
+18.625	0.000	tNET	FF	2	u_game/u_phys/n1880_s0/CIN
+18.660	0.035	tINS	FF	1	u_game/u_phys/n1880_s0/COUT
+18.660	0.000	tNET	FF	2	u_game/u_phys/n1879_s0/CIN
+18.695	0.035	tINS	FF	1	u_game/u_phys/n1879_s0/COUT
+18.695	0.000	tNET	FF	2	u_game/u_phys/n1878_s0/CIN
+18.730	0.035	tINS	FF	1	u_game/u_phys/n1878_s0/COUT
+18.730	0.000	tNET	FF	2	u_game/u_phys/n1877_s0/CIN
+19.200	0.470	tINS	FF	1	u_game/u_phys/n1877_s0/SUM
+19.674	0.474	tNET	FF	1	u_game/u_phys/n1925_s4/I1
+20.229	0.555	tINS	FF	4	u_game/u_phys/n1925_s4/F
+20.703	0.474	tNET	FF	1	u_game/u_phys/n2067_s43/I1
+21.258	0.555	tINS	FF	1	u_game/u_phys/n2067_s43/F
+21.732	0.474	tNET	FF	1	u_game/u_phys/n2067_s18/I1
+22.287	0.555	tINS	FF	1	u_game/u_phys/n2067_s18/F
+22.761	0.474	tNET	FF	1	u_game/u_phys/n2067_s8/I3
+23.132	0.371	tINS	FF	21	u_game/u_phys/n2067_s8/F
+23.606	0.474	tNET	FF	1	u_game/u_phys/n2075_s7/I2
+24.059	0.453	tINS	FF	6	u_game/u_phys/n2075_s7/F
+24.533	0.474	tNET	FF	1	u_game/u_phys/n2207_s57/I1
+25.088	0.555	tINS	FF	2	u_game/u_phys/n2207_s57/F
+25.562	0.474	tNET	FF	1	u_game/u_phys/n2207_s35/I0
+26.079	0.517	tINS	FF	2	u_game/u_phys/n2207_s35/F
+26.553	0.474	tNET	FF	1	u_game/u_phys/n2207_s20/I0
+27.070	0.517	tINS	FF	1	u_game/u_phys/n2207_s20/F
+27.544	0.474	tNET	FF	1	u_game/u_phys/n2207_s12/I1
+28.099	0.555	tINS	FF	25	u_game/u_phys/n2207_s12/F
+28.573	0.474	tNET	FF	1	u_game/u_phys/n2217_s7/I2
+29.026	0.453	tINS	FF	7	u_game/u_phys/n2217_s7/F
+29.500	0.474	tNET	FF	1	u_game/u_phys/n2354_s23/I0
+30.017	0.517	tINS	FF	1	u_game/u_phys/n2354_s23/F
+30.491	0.474	tNET	FF	1	u_game/u_phys/n2354_s15/I1
+31.046	0.555	tINS	FF	1	u_game/u_phys/n2354_s15/F
+31.520	0.474	tNET	FF	1	u_game/u_phys/n2354_s11/I1
+32.075	0.555	tINS	FF	5	u_game/u_phys/n2354_s11/F
+32.549	0.474	tNET	FF	1	u_game/u_phys/n2344_s11/I0
+33.066	0.517	tINS	FF	28	u_game/u_phys/n2344_s11/F
+33.540	0.474	tNET	FF	1	u_game/u_phys/n2484_s55/I0
+34.057	0.517	tINS	FF	1	u_game/u_phys/n2484_s55/F
+34.531	0.474	tNET	FF	1	u_game/u_phys/n2484_s37/I0
+35.048	0.517	tINS	FF	3	u_game/u_phys/n2484_s37/F
+35.522	0.474	tNET	FF	1	u_game/u_phys/n2484_s21/I1
+36.077	0.555	tINS	FF	3	u_game/u_phys/n2484_s21/F
+36.551	0.474	tNET	FF	1	u_game/u_phys/n2484_s13/I1
+37.106	0.555	tINS	FF	4	u_game/u_phys/n2484_s13/F
+37.580	0.474	tNET	FF	1	u_game/u_phys/n2609_s87/I1
+38.135	0.555	tINS	FF	1	u_game/u_phys/n2609_s87/F
+38.609	0.474	tNET	FF	1	u_game/u_phys/n2609_s76/I1
+39.164	0.555	tINS	FF	1	u_game/u_phys/n2609_s76/F
+39.638	0.474	tNET	FF	1	u_game/u_phys/n2609_s62/I1
+40.193	0.555	tINS	FF	1	u_game/u_phys/n2609_s62/F
+40.667	0.474	tNET	FF	1	u_game/u_phys/n2609_s48/I1
+41.222	0.555	tINS	FF	2	u_game/u_phys/n2609_s48/F
+41.696	0.474	tNET	FF	1	u_game/u_phys/n2609_s30/I0
+42.213	0.517	tINS	FF	1	u_game/u_phys/n2609_s30/F
+42.687	0.474	tNET	FF	1	u_game/u_phys/n2609_s14/I1
+43.242	0.555	tINS	FF	4	u_game/u_phys/n2609_s14/F
+43.716	0.474	tNET	FF	1	u_game/u_phys/n2623_s8/I1
+44.271	0.555	tINS	FF	3	u_game/u_phys/n2623_s8/F
+44.745	0.474	tNET	FF	1	u_game/u_phys/n2623_s4/I1
+45.300	0.555	tINS	FF	5	u_game/u_phys/n2623_s4/F
+45.774	0.474	tNET	FF	2	u_game/u_phys/n2709_s0/I0
+46.323	0.549	tINS	FR	1	u_game/u_phys/n2709_s0/COUT
+46.323	0.000	tNET	RR	2	u_game/u_phys/n2708_s0/CIN
+46.358	0.035	tINS	RF	1	u_game/u_phys/n2708_s0/COUT
+46.358	0.000	tNET	FF	2	u_game/u_phys/n2707_s0/CIN
+46.394	0.035	tINS	FF	1	u_game/u_phys/n2707_s0/COUT
+46.394	0.000	tNET	FF	2	u_game/u_phys/n2706_s0/CIN
+46.429	0.035	tINS	FF	1	u_game/u_phys/n2706_s0/COUT
+46.429	0.000	tNET	FF	2	u_game/u_phys/n2705_s0/CIN
+46.464	0.035	tINS	FF	1	u_game/u_phys/n2705_s0/COUT
+46.464	0.000	tNET	FF	2	u_game/u_phys/n2704_s0/CIN
+46.499	0.035	tINS	FF	1	u_game/u_phys/n2704_s0/COUT
+46.499	0.000	tNET	FF	2	u_game/u_phys/n2703_s0/CIN
+46.534	0.035	tINS	FF	1	u_game/u_phys/n2703_s0/COUT
+46.534	0.000	tNET	FF	2	u_game/u_phys/n2702_s0/CIN
+47.004	0.470	tINS	FF	2	u_game/u_phys/n2702_s0/SUM
+47.478	0.474	tNET	FF	1	u_game/u_phys/n2862_s94/I0
+47.995	0.517	tINS	FF	1	u_game/u_phys/n2862_s94/F
+48.469	0.474	tNET	FF	1	u_game/u_phys/n2862_s89/I3
+48.840	0.371	tINS	FF	1	u_game/u_phys/n2862_s89/F
+49.314	0.474	tNET	FF	1	u_game/u_phys/n2862_s82/I3
+49.685	0.371	tINS	FF	1	u_game/u_phys/n2862_s82/F
+50.159	0.474	tNET	FF	1	u_game/u_phys/n2862_s61/I1
+50.714	0.555	tINS	FF	1	u_game/u_phys/n2862_s61/F
+51.188	0.474	tNET	FF	1	u_game/u_phys/n2862_s35/I2
+51.641	0.453	tINS	FF	2	u_game/u_phys/n2862_s35/F
+52.115	0.474	tNET	FF	1	u_game/u_phys/n2862_s20/I2
+52.568	0.453	tINS	FF	3	u_game/u_phys/n2862_s20/F
+53.042	0.474	tNET	FF	1	u_game/u_phys/n2873_s11/I2
+53.495	0.453	tINS	FF	4	u_game/u_phys/n2873_s11/F
+53.969	0.474	tNET	FF	1	u_game/u_phys/n2874_s12/I3
+54.340	0.371	tINS	FF	3	u_game/u_phys/n2874_s12/F
+54.814	0.474	tNET	FF	1	u_game/u_phys/n2877_s10/I2
+55.267	0.453	tINS	FF	1	u_game/u_phys/n2877_s10/F
+55.741	0.474	tNET	FF	1	u_game/u_phys/n2877_s9/I1
+56.296	0.555	tINS	FF	3	u_game/u_phys/n2877_s9/F
+56.770	0.474	tNET	FF	1	u_game/u_phys/n2877_s8/I0
+57.287	0.517	tINS	FF	2	u_game/u_phys/n2877_s8/F
+57.761	0.474	tNET	FF	1	u_game/u_phys/n2877_s11/I3
+58.132	0.371	tINS	FF	4	u_game/u_phys/n2877_s11/F
+58.606	0.474	tNET	FF	2	u_game/u_phys/n2959_s0/I0
+59.155	0.549	tINS	FR	1	u_game/u_phys/n2959_s0/COUT
+59.155	0.000	tNET	RR	2	u_game/u_phys/n2958_s0/CIN
+59.625	0.470	tINS	RF	4	u_game/u_phys/n2958_s0/SUM
+60.099	0.474	tNET	FF	1	u_game/u_phys/n2998_s22/I0
+60.616	0.517	tINS	FF	1	u_game/u_phys/n2998_s22/F
+61.090	0.474	tNET	FF	1	u_game/u_phys/n2998_s15/I2
+61.543	0.453	tINS	FF	1	u_game/u_phys/n2998_s15/F
+62.017	0.474	tNET	FF	1	u_game/u_phys/n2998_s9/I3
+62.388	0.371	tINS	FF	1	u_game/u_phys/n2998_s9/F
+62.862	0.474	tNET	FF	1	u_game/u_phys/n2998_s4/I3
+63.233	0.371	tINS	FF	6	u_game/u_phys/n2998_s4/F
+63.707	0.474	tNET	FF	1	u_game/u_phys/n3105_s19/I0
+64.224	0.517	tINS	FF	1	u_game/u_phys/n3105_s19/F
+64.698	0.474	tNET	FF	1	u_game/u_phys/n3105_s11/I1
+65.253	0.555	tINS	FF	1	u_game/u_phys/n3105_s11/F
+65.727	0.474	tNET	FF	1	u_game/u_phys/n3105_s9/I0
+66.244	0.517	tINS	FF	27	u_game/u_phys/n3105_s9/F
+66.718	0.474	tNET	FF	1	u_game/u_phys/n3103_s9/I0
+67.235	0.517	tINS	FF	7	u_game/u_phys/n3103_s9/F
+67.709	0.474	tNET	FF	1	u_game/u_phys/n3231_s26/I2
+68.162	0.453	tINS	FF	2	u_game/u_phys/n3231_s26/F
+68.636	0.474	tNET	FF	1	u_game/u_phys/n3231_s19/I1
+69.191	0.555	tINS	FF	1	u_game/u_phys/n3231_s19/F
+69.665	0.474	tNET	FF	1	u_game/u_phys/n3231_s13/I1
+70.220	0.555	tINS	FF	2	u_game/u_phys/n3231_s13/F
+70.694	0.474	tNET	FF	1	u_game/u_phys/n3219_s16/I0
+71.211	0.517	tINS	FF	1	u_game/u_phys/n3219_s16/F
+71.685	0.474	tNET	FF	1	u_game/u_phys/n3219_s8/I1
+72.240	0.555	tINS	FF	38	u_game/u_phys/n3219_s8/F
+72.714	0.474	tNET	FF	1	u_game/u_phys/n3235_s4/I2
+73.167	0.453	tINS	FF	4	u_game/u_phys/n3235_s4/F
+73.641	0.474	tNET	FF	1	u_game/u_phys/n3332_s39/I1
+74.196	0.555	tINS	FF	1	u_game/u_phys/n3332_s39/F
+74.670	0.474	tNET	FF	1	u_game/u_phys/n3332_s22/I1
+75.225	0.555	tINS	FF	1	u_game/u_phys/n3332_s22/F
+75.699	0.474	tNET	FF	1	u_game/u_phys/n3332_s14/I0
+76.216	0.517	tINS	FF	5	u_game/u_phys/n3332_s14/F
+76.690	0.474	tNET	FF	1	u_game/u_phys/n3332_s10/I0
+77.207	0.517	tINS	FF	43	u_game/u_phys/n3332_s10/F
+77.681	0.474	tNET	FF	1	u_game/u_phys/n3350_s4/I2
+78.134	0.453	tINS	FF	5	u_game/u_phys/n3350_s4/F
+78.608	0.474	tNET	FF	1	u_game/u_phys/n3442_s100/I1
+79.163	0.555	tINS	FF	1	u_game/u_phys/n3442_s100/F
+79.637	0.474	tNET	FF	1	u_game/u_phys/n3442_s81/I0
+80.154	0.517	tINS	FF	1	u_game/u_phys/n3442_s81/F
+80.628	0.474	tNET	FF	1	u_game/u_phys/n3442_s55/I0
+81.145	0.517	tINS	FF	1	u_game/u_phys/n3442_s55/F
+81.619	0.474	tNET	FF	1	u_game/u_phys/n3442_s36/I2
+82.072	0.453	tINS	FF	1	u_game/u_phys/n3442_s36/F
+82.546	0.474	tNET	FF	1	u_game/u_phys/n3442_s19/I1
+83.101	0.555	tINS	FF	12	u_game/u_phys/n3442_s19/F
+83.575	0.474	tNET	FF	1	u_game/u_phys/n3452_s9/I1
+84.130	0.555	tINS	FF	3	u_game/u_phys/n3452_s9/F
+84.604	0.474	tNET	FF	1	u_game/u_phys/n3554_s74/I1
+85.159	0.555	tINS	FF	1	u_game/u_phys/n3554_s74/F
+85.633	0.474	tNET	FF	1	u_game/u_phys/n3554_s57/I1
+86.188	0.555	tINS	FF	3	u_game/u_phys/n3554_s57/F
+86.662	0.474	tNET	FF	1	u_game/u_phys/n3554_s37/I0
+87.179	0.517	tINS	FF	1	u_game/u_phys/n3554_s37/F
+87.653	0.474	tNET	FF	1	u_game/u_phys/n3570_s22/I0
+88.170	0.517	tINS	FF	2	u_game/u_phys/n3570_s22/F
+88.644	0.474	tNET	FF	1	u_game/u_phys/n3554_s13/I1
+89.199	0.555	tINS	FF	2	u_game/u_phys/n3554_s13/F
+89.673	0.474	tNET	FF	1	u_game/u_phys/n3554_s8/I1
+90.228	0.555	tINS	FF	28	u_game/u_phys/n3554_s8/F
+90.702	0.474	tNET	FF	1	u_game/u_phys/n3549_s8/I1
+91.257	0.555	tINS	FF	7	u_game/u_phys/n3549_s8/F
+91.731	0.474	tNET	FF	1	u_game/u_phys/n3653_s67/I3
+92.102	0.371	tINS	FF	1	u_game/u_phys/n3653_s67/F
+92.576	0.474	tNET	FF	1	u_game/u_phys/n3653_s45/I1
+93.131	0.555	tINS	FF	1	u_game/u_phys/n3653_s45/F
+93.605	0.474	tNET	FF	1	u_game/u_phys/n3653_s28/I0
+94.122	0.517	tINS	FF	3	u_game/u_phys/n3653_s28/F
+94.596	0.474	tNET	FF	1	u_game/u_phys/n3653_s17/I0
+95.113	0.517	tINS	FF	2	u_game/u_phys/n3653_s17/F
+95.587	0.474	tNET	FF	1	u_game/u_phys/n3653_s11/I0
+96.104	0.517	tINS	FF	39	u_game/u_phys/n3653_s11/F
+96.578	0.474	tNET	FF	1	u_game/u_phys/n3670_s4/I2
+97.031	0.453	tINS	FF	3	u_game/u_phys/n3670_s4/F
+97.505	0.474	tNET	FF	1	u_game/u_phys/n9849_s43/I1
+98.060	0.555	tINS	FF	2	u_game/u_phys/n9849_s43/F
+98.534	0.474	tNET	FF	1	u_game/u_phys/n9849_s29/I1
+99.089	0.555	tINS	FF	1	u_game/u_phys/n9849_s29/F
+99.563	0.474	tNET	FF	1	u_game/u_phys/n9849_s23/I1
+100.118	0.555	tINS	FF	1	u_game/u_phys/n9849_s23/F
+100.592	0.474	tNET	FF	1	u_game/u_phys/n9849_s16/I0
+101.109	0.517	tINS	FF	3	u_game/u_phys/n9849_s16/F
+101.583	0.474	tNET	FF	1	u_game/u_phys/n9849_s8/I0
+102.100	0.517	tINS	FF	2	u_game/u_phys/n9849_s8/F
+102.574	0.474	tNET	FF	1	u_game/u_phys/n9847_s95/I1
+103.129	0.555	tINS	FF	4	u_game/u_phys/n9847_s95/F
+103.603	0.474	tNET	FF	1	u_game/u_phys/n9847_s87/I1
+104.158	0.555	tINS	FF	3	u_game/u_phys/n9847_s87/F
+104.632	0.474	tNET	FF	1	u_game/u_phys/n9847_s73/I1
+105.187	0.555	tINS	FF	2	u_game/u_phys/n9847_s73/F
+105.661	0.474	tNET	FF	1	u_game/u_phys/n9847_s66/I1
+106.216	0.555	tINS	FF	1	u_game/u_phys/n9847_s66/F
+106.690	0.474	tNET	FF	1	u_game/u_phys/n9847_s51/I1
+107.245	0.555	tINS	FF	1	u_game/u_phys/n9847_s51/F
+107.719	0.474	tNET	FF	1	u_game/u_phys/n9847_s33/I1
+108.274	0.555	tINS	FF	2	u_game/u_phys/n9847_s33/F
+108.748	0.474	tNET	FF	1	u_game/u_phys/n9847_s18/I1
+109.303	0.555	tINS	FF	2	u_game/u_phys/n9847_s18/F
+109.777	0.474	tNET	FF	1	u_game/u_phys/n9847_s11/I1
+110.332	0.555	tINS	FF	2	u_game/u_phys/n9847_s11/F
+110.806	0.474	tNET	FF	1	u_game/u_phys/n9847_s5/I0
+111.323	0.517	tINS	FF	9	u_game/u_phys/n9847_s5/F
+111.797	0.474	tNET	FF	1	u_game/u_phys/n9847_s3/I1
+112.352	0.555	tINS	FF	4	u_game/u_phys/n9847_s3/F
+112.826	0.474	tNET	FF	1	u_game/u_phys/n9850_s15/I1
+113.381	0.555	tINS	FF	3	u_game/u_phys/n9850_s15/F
+113.855	0.474	tNET	FF	1	u_game/u_phys/n9850_s74/I0
+114.372	0.517	tINS	FF	2	u_game/u_phys/n9850_s74/F
+114.846	0.474	tNET	FF	1	u_game/u_phys/n9850_s3/I1
+115.401	0.555	tINS	FF	5	u_game/u_phys/n9850_s3/F
+115.875	0.474	tNET	FF	1	u_game/u_phys/n9846_s2/I0
+116.392	0.517	tINS	FF	1	u_game/u_phys/n9846_s2/F
+116.866	0.474	tNET	FF	1	u_game/u_phys/n9846_s1/I1
+117.421	0.555	tINS	FF	1	u_game/u_phys/n9846_s1/F
+117.895	0.474	tNET	FF	2	u_game/u_phys/n10039_s0/I0
+118.444	0.549	tINS	FR	1	u_game/u_phys/n10039_s0/COUT
+118.444	0.000	tNET	RR	2	u_game/u_phys/n10038_s0/CIN
+118.479	0.035	tINS	RF	1	u_game/u_phys/n10038_s0/COUT
+118.479	0.000	tNET	FF	2	u_game/u_phys/n10037_s0/CIN
+118.515	0.035	tINS	FF	1	u_game/u_phys/n10037_s0/COUT
+118.515	0.000	tNET	FF	2	u_game/u_phys/n10036_s0/CIN
+118.550	0.035	tINS	FF	1	u_game/u_phys/n10036_s0/COUT
+118.550	0.000	tNET	FF	2	u_game/u_phys/n10035_s0/CIN
+118.585	0.035	tINS	FF	1	u_game/u_phys/n10035_s0/COUT
+118.585	0.000	tNET	FF	2	u_game/u_phys/n10034_s0/CIN
+118.620	0.035	tINS	FF	1	u_game/u_phys/n10034_s0/COUT
+118.620	0.000	tNET	FF	2	u_game/u_phys/n10033_s0/CIN
+118.655	0.035	tINS	FF	1	u_game/u_phys/n10033_s0/COUT
+118.655	0.000	tNET	FF	2	u_game/u_phys/n10032_s0/CIN
+118.691	0.035	tINS	FF	1	u_game/u_phys/n10032_s0/COUT
+118.691	0.000	tNET	FF	2	u_game/u_phys/n10031_s0/CIN
+119.161	0.470	tINS	FF	1	u_game/u_phys/n10031_s0/SUM
+119.635	0.474	tNET	FF	2	u_game/u_phys/n10031_s1/I1
+120.205	0.570	tINS	FR	1	u_game/u_phys/n10031_s1/COUT
+120.205	0.000	tNET	RR	2	u_game/u_phys/n10030_s1/CIN
+120.675	0.470	tINS	RF	3	u_game/u_phys/n10030_s1/SUM
+121.149	0.474	tNET	FF	1	u_game/u_phys/n33921_s14/I1
+121.704	0.555	tINS	FF	1	u_game/u_phys/n33921_s14/F
+122.178	0.474	tNET	FF	1	u_game/u_phys/n33921_s9/I2
+122.631	0.453	tINS	FF	6	u_game/u_phys/n33921_s9/F
+123.105	0.474	tNET	FF	1	u_game/u_phys/n33929_s10/I1
+123.660	0.555	tINS	FF	1	u_game/u_phys/n33929_s10/F
+124.134	0.474	tNET	FF	1	u_game/u_phys/n33929_s6/I2
+124.587	0.453	tINS	FF	1	u_game/u_phys/n33929_s6/F
+125.061	0.474	tNET	FF	1	u_game/u_phys/n33929_s5/I1
+125.616	0.555	tINS	FF	1	u_game/u_phys/n33929_s5/F
+126.090	0.474	tNET	FF	1	u_game/u_phys/vel0_y_1_s1/D
+Data Required Path:
+AT	DELAY	TYPE	RF	FANOUT	NODE
+30.303	0.000				u_pll/rpll_inst/CLKOUT.default_gen_clk
+30.803	0.500	tCL	RR	2434	u_pll/rpll_inst/CLKOUT
+31.163	0.360	tNET	RR	1	u_game/u_phys/vel0_y_1_s1/CLK
+31.128	-0.035	tSu		1	u_game/u_phys/vel0_y_1_s1
+Path Statistics:
+Clock Skew:	0.000
+Setup Relationship:	30.303
+Logic Level:	127
+Arrival Clock Path Delay:	cell: 0.000, 0.000%; route: 0.360, 100.000%
+Arrival Data Path Delay:	cell: 68.118, 54.395%; route: 56.880, 45.420%; tC2Q: 0.232, 0.185%
+Required Clock Path Delay:	cell: 0.000, 0.000%; route: 0.360, 100.000%
+
+Path 2
+Path Summary:
+Slack	-94.962
+Data Arrival Time	126.090
+Data Required Time	31.128
+From	u_game/u_phys/lfsr_1_s0
+To	u_game/u_phys/vel0_y_3_s1
+Launch Clk	u_pll/rpll_inst/CLKOUT.default_gen_clk[R]
+Latch Clk	u_pll/rpll_inst/CLKOUT.default_gen_clk[R]

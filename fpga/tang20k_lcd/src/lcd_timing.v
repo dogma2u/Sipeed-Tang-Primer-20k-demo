@@ -1,5 +1,5 @@
 // 800x480 LCD timing (Sipeed 5"). Active-low HSYNC/VSYNC.
-// Composites RGB565 scene pixels with a 5px border (white, or red in black-hole mode).
+// 5px rim: black by default (hides non-play garbage); red when border_red (BH bounce).
 
 module lcd_timing (
     input  wire       clk,
@@ -86,9 +86,10 @@ always @(posedge clk or negedge rst_n) begin
         lcd_hsync   <= hs;
         lcd_vsync   <= vs;
         lcd_de      <= de;
-        lcd_r       <= on_border ? 5'h1F : (de ? pix_r_i : 5'h00);
-        lcd_g       <= on_border ? (border_red ? 6'h00 : 6'h3F) : (de ? pix_g_i : 6'h00);
-        lcd_b       <= on_border ? (border_red ? 5'h00 : 5'h1F) : (de ? pix_b_i : 5'h00);
+        // Black rim (covers non-play edge garbage). Red rim in BH (bounce mode).
+        lcd_r       <= on_border ? (border_red ? 5'h1F : 5'h00) : (de ? pix_r_i : 5'h00);
+        lcd_g       <= on_border ? 6'h00 : (de ? pix_g_i : 6'h00);
+        lcd_b       <= on_border ? 5'h00 : (de ? pix_b_i : 5'h00);
         pix_x       <= x_now[9:0];
         pix_y       <= y_now[9:0];
         de_now      <= de;

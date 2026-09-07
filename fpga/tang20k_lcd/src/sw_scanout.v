@@ -2,6 +2,7 @@
 
 module sw_scanout (
     input  wire       clk,
+    input  wire       frame_start,
     input  wire       de_now,
     input  wire [9:0] pix_x,
     input  wire [9:0] pix_y,
@@ -26,6 +27,12 @@ module sw_scanout (
 localparam integer FB_W   = 800;
 localparam integer FB_H   = 470;
 localparam integer SUN_R  = 18;
+localparam [11:0] STAR_MAP_W    = 12'd3200;
+localparam [8:0]  STAR_MAP_H    = 9'd470;
+// Base drift was 1 map px/frame. Speed Q8.8: 256=1x, 512=2x, 128=0.5x (2x slower).
+// Off-axis (not L/R/U/D or 45deg) uses 4x that picked speed.
+localparam [15:0] STAR_SPD_1X   = 16'd256;
+`include "star_field_rom.vh"
 localparam integer FUEL_MAX_MS    = 15000;
 localparam integer FUEL_YEL_MS    = 1500;
 localparam integer FUEL_RED_MS    = 750;
@@ -345,46 +352,41 @@ function push_fire_text;
     end
 endfunction
 
-function star_rom_hit;
-    input [9:0] px, py;
-    begin
-        case ({py[8:0], px})
-            {9'd50,  10'd90}:  star_rom_hit = 1'b1;
-            {9'd60,  10'd130}: star_rom_hit = 1'b1;
-            {9'd55,  10'd170}: star_rom_hit = 1'b1;
-            {9'd70,  10'd210}: star_rom_hit = 1'b1;
-            {9'd100, 10'd230}: star_rom_hit = 1'b1;
-            {9'd110, 10'd270}: star_rom_hit = 1'b1;
-            {9'd95,  10'd300}: star_rom_hit = 1'b1;
-            {9'd40,  10'd520}: star_rom_hit = 1'b1;
-            {9'd70,  10'd560}: star_rom_hit = 1'b1;
-            {9'd45,  10'd600}: star_rom_hit = 1'b1;
-            {9'd75,  10'd640}: star_rom_hit = 1'b1;
-            {9'd50,  10'd680}: star_rom_hit = 1'b1;
-            {9'd360, 10'd100}: star_rom_hit = 1'b1;
-            {9'd350, 10'd180}: star_rom_hit = 1'b1;
-            {9'd390, 10'd130}: star_rom_hit = 1'b1;
-            {9'd395, 10'd150}: star_rom_hit = 1'b1;
-            {9'd400, 10'd170}: star_rom_hit = 1'b1;
-            {9'd440, 10'd110}: star_rom_hit = 1'b1;
-            {9'd445, 10'd190}: star_rom_hit = 1'b1;
-            {9'd400, 10'd650}: star_rom_hit = 1'b1;
-            {9'd420, 10'd680}: star_rom_hit = 1'b1;
-            {9'd400, 10'd710}: star_rom_hit = 1'b1;
-            {9'd440, 10'd690}: star_rom_hit = 1'b1;
-            {9'd380, 10'd720}: star_rom_hit = 1'b1;
-            {9'd160, 10'd720}: star_rom_hit = 1'b1;
-            {9'd130, 10'd700}: star_rom_hit = 1'b1;
-            {9'd130, 10'd740}: star_rom_hit = 1'b1;
-            {9'd100, 10'd760}: star_rom_hit = 1'b1;
-            default: star_rom_hit = 1'b0;
-        endcase
-    end
-endfunction
-
+// Star overlay: 3200x470 map; any-angle drift; speed 0.5x..2x (4x if not cardinal/45).
 wire        in_fb = de_now && (pix_x < FB_W) && (pix_y < FB_H);
 reg         in_fb_d;
 reg [9:0]   pix_x_d, pix_y_d;
+reg [11:0]  star_pan_x;
+reg [8:0]   star_pan_y;
+reg [7:0]   star_ang;
+reg [15:0]  star_spd;      // Q8.8 px/frame (128..512; up to 2048 off-axis)
+reg signed [15:0] star_acc_x; // Q8.8 fractional accum
+reg signed [15:0] star_acc_y;
+reg [15:0]  star_dir_tmr;
+reg [15:0]  star_lfsr;
+
+wire signed [15:0] star_sin;
+wire signed [15:0] star_cos;
+sin_cos u_star_sc (
+    .angle(star_ang),
+    .sin_val(star_sin),
+    .cos_val(star_cos)
+);
+
+// Latched vx/vy: mul only on dir reload (DSP), then FF hold
+reg signed [15:0] star_vx_r;
+reg signed [15:0] star_vy_r;
+reg               star_vel_load;
+
+wire [12:0] star_sum_x = {3'b0, pix_x_d} + {1'b0, star_pan_x};
+wire [11:0] star_mx    = (star_sum_x >= 13'd3200) ?
+                         (star_sum_x[11:0] - 12'd3200) : star_sum_x[11:0];
+wire [10:0] star_sum_y = {1'b0, pix_y_d} + {2'b0, star_pan_y};
+wire [10:0] star_sy1   = (star_sum_y >= 11'd470) ?
+                         (star_sum_y - 11'd470) : star_sum_y;
+wire [8:0]  star_my    = (star_sy1 >= 11'd470) ?
+                         (star_sy1[8:0] - 9'd470) : star_sy1[8:0];
+wire        star_hit   = star_map_hit(star_mx, star_my);
 
 // Latched HUD fields (FF) -- digit/fuel trees run once/clk, not as pixel combo
 reg [3:0]  tm_htens_r, tm_hones_r, tm_ltens_r, tm_lones_r;
@@ -405,6 +407,84 @@ always @(posedge clk) begin
     in_fb_d <= in_fb;
     pix_x_d <= pix_x;
     pix_y_d <= pix_y;
+
+    // Once per FB frame: accumulate any-angle velocity into pan
+    if (de_now && (pix_x == 10'd799) && (pix_y == 10'd469)) begin
+        begin : star_step
+            reg signed [15:0] nax, nay, sx, sy;
+            reg signed [16:0] tx, ty;
+
+            if (star_lfsr == 16'd0)
+                star_lfsr <= 16'hACE1;
+            else
+                star_lfsr <= {star_lfsr[14:0],
+                              star_lfsr[15] ^ star_lfsr[13] ^
+                              star_lfsr[12] ^ star_lfsr[10]};
+
+            // Reload latched vel after ang/spd settle (sin_cos combo from regs)
+            if (star_vel_load) begin : star_vel_mul
+                (* use_dsp = "yes" *) reg signed [31:0] vxp;
+                (* use_dsp = "yes" *) reg signed [31:0] vyp;
+                vxp = star_cos * $signed({1'b0, star_spd});
+                vyp = star_sin * $signed({1'b0, star_spd});
+                star_vx_r     <= vxp[23:8];
+                star_vy_r     <= vyp[23:8];
+                star_vel_load <= 1'b0;
+            end
+
+            nax = star_acc_x + star_vx_r;
+            nay = star_acc_y + star_vy_r;
+            sx  = nax >>> 8;
+            sy  = nay >>> 8;
+            star_acc_x <= nax - (sx <<< 8);
+            star_acc_y <= nay - (sy <<< 8);
+
+            tx = $signed({1'b0, star_pan_x}) + sx;
+            if (tx < 0)
+                tx = tx + 17'sd3200;
+            else if (tx >= 17'sd3200)
+                tx = tx - 17'sd3200;
+            star_pan_x <= tx[11:0];
+
+            ty = $signed({1'b0, star_pan_y}) + sy;
+            if (ty < 0)
+                ty = ty + 17'sd470;
+            else if (ty >= 17'sd470)
+                ty = ty - 17'sd470;
+            star_pan_y <= ty[8:0];
+
+            // New angle + speed every ~2..7 s
+            if (star_dir_tmr == 16'd0) begin
+                begin : star_dir_pick
+                    reg [7:0]  nang;
+                    reg [15:0] nspd;
+                    star_dir_tmr <= 16'd100 + {8'd0, star_lfsr[7:0]};
+                    nang = star_lfsr[15:8];
+                    star_ang <= nang;
+                    case (star_lfsr[6:4])
+                        3'd0: nspd = 16'd128;  // 0.5x (2x slower)
+                        3'd1: nspd = 16'd160;
+                        3'd2: nspd = 16'd192;
+                        3'd3: nspd = 16'd224;
+                        3'd4: nspd = STAR_SPD_1X; // 1x
+                        3'd5: nspd = 16'd320;
+                        3'd6: nspd = 16'd384;
+                        default: nspd = 16'd512; // 2x faster
+                    endcase
+                    // Angle units: 256=360deg. Multiples of 32 = L/R/U/D + 45s.
+                    // Any other heading: 4x that speed.
+                    if (nang[4:0] == 5'd0)
+                        star_spd <= nspd;
+                    else
+                        star_spd <= nspd << 2;
+                    star_vel_load <= 1'b1;
+                end
+            end else begin
+                star_dir_tmr <= star_dir_tmr - 16'd1;
+            end
+        end
+    end
+
     // Snapshot slow-changing HUD inputs into FFs
     begin : hud_latch
         reg [10:0] score0_mag, score1_mag;
@@ -485,12 +565,12 @@ always @(posedge clk) begin
     end
 end
 
+// Round sun / BH (r^2)
 wire signed [15:0] sdx_d = $signed({6'b0, pix_x_d}) - 16'sd400;
 wire signed [15:0] sdy_d = $signed({6'b0, pix_y_d}) - 16'sd240;
 wire signed [31:0] srr_d = sdx_d * sdx_d + sdy_d * sdy_d;
 wire in_sun = in_fb_d && !black_hole_r && (srr_d <= (SUN_R * SUN_R));
 wire in_bh  = in_fb_d && black_hole_r && (srr_d <= (SUN_R * SUN_R));
-wire star_hit = star_rom_hit(pix_x_d, pix_y_d);
 
 localparam integer TM_X0 = 320;
 wire [9:0] s0_hx = 10'd52;
@@ -540,8 +620,6 @@ always @(posedge clk) begin
         end
     end else if (in_bh) begin
         pix_r <= 5'h02; pix_g <= 6'h00; pix_b <= 5'h02;
-    end else if (in_fb_d && star_hit) begin
-        pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else if (in_fb_d && (rdata != COL_OFF)) begin
         if (rdata == COL_PL) begin
             if (pl_hs_flash_r) begin
@@ -558,6 +636,9 @@ always @(posedge clk) begin
         end else begin
             pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F; // shots white
         end
+    end else if (in_fb_d && star_hit) begin
+        // Background overlay: under ships/shots so ship pass is not mistaken for pan
+        pix_r <= 5'h1F; pix_g <= 6'h3F; pix_b <= 5'h1F;
     end else if (in_fb_d && timer_hit) begin
         if (timer_sec_r < 14'd10) begin
             pix_r <= 5'h19; pix_g <= 6'h00; pix_b <= 5'h00;

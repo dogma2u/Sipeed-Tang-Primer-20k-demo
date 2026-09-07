@@ -5,6 +5,10 @@ IO_PORT "sys_clk" IO_TYPE=LVCMOS33 PULL_MODE=UP;
 IO_LOC "btn_hyper_n" T10;
 IO_PORT "btn_hyper_n" IO_TYPE=LVCMOS33 PULL_MODE=UP;
 
+// Dock DIP5 -- attract test when UP (1.5V bank; down = normal)
+IO_LOC "dip5_n" T5;
+IO_PORT "dip5_n" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+
 // Dock keys -- 1.5V bank
 IO_LOC "btn_left_n" T3;
 IO_PORT "btn_left_n" IO_TYPE=LVCMOS15 PULL_MODE=UP;

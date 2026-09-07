@@ -42,8 +42,8 @@
 `define CFG_FUEL_FRAME_MS   20
 `define CFG_TIMER_START     130
 `define CFG_TIMER_BONUS     5
-`define CFG_TIMER_MAX       9999
-`define CFG_DEMO_TIMER      9999
+`define CFG_TIMER_MAX       5959
+`define CFG_DEMO_TIMER      5959
 `define CFG_SCORE_LO        (-11'sd999)
 `define CFG_SCORE_HI        (11'sd999)
 
@@ -52,6 +52,11 @@
 `define CFG_AI_VANISH_FR    25
 `define CFG_HS_VANISH_FR    50
 `define CFG_HS_FLASH_FR     75
+// AI-controlled ships thrust this many frames right after spawn (0.5s @ 50fps)
+`define CFG_AI_SPAWN_THRUST_FR 25
+// Min pixel separation between ships on spawn (1/4 screen width)
+`define CFG_SPAWN_MIN_DIST  200
+// Attract test mode: Dock DIP5 up (pin T5). Down = normal attract.
 
 // --- AI playtime ramps ---
 `define CFG_PLAY_MAX_SEC         300
@@ -93,13 +98,9 @@
 `define CFG_AI_MAXV_1       12
 `define CFG_AI_MAXV_2       16
 // Demo attract: speed clamp; thrust = AI_THR_3 * NUM/DEN
-// SHIP_MAXV was 21, now -25% -> 16
-`define CFG_SHIP_MAXV       16
+// One maxv for all modes (sun / BH / anti-grav)
+`define CFG_SHIP_MAXV       10
 `define CFG_DEMO_THR_NUM    3
 `define CFG_DEMO_THR_DEN    2
-
-// --- Secret green sun (todo 22; not in README) ---
-`define CFG_GREEN_SUN_HITS      50
-`define CFG_GREEN_SUN_GRAV_MAG  24
 
 `endif
