@@ -172,7 +172,8 @@ Gameplay controls: `sw_config.vh` (see **Tweaking gameplay**).
 
 **AI:** Elapsed playtime ramps range, standoff, aim, and thrust through **5:00**. Hunting uses ~**5°** heading bins (not 90° cardinal snaps), with wall and sun keep-out.
 
-**Stars:** Constellation ROM in `star_field_rom.vh` — map **3200×470** (360°), screen shows **800** px (90°). Any-angle drift with speed 0.5×–2× (4× when off-axis). Overlay sits **under** ships and shots.
+**Stars:** Constellation ROM in `star_field_rom.vh` — map **3200×470** (360°), screen shows **800** px (90°).  
+Any-angle drift with speed 0.5×–2× (4× when off-axis). Overlay sits **under** ships and shots.
 
 Per-frame flow (simplified): physics → collisions / sun / shots → erase old vectors → stroke ships → shot streaks.
 
