@@ -6,7 +6,7 @@
 
 <p>&nbsp;</p>
 
-Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
+Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
 
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
@@ -99,7 +99,7 @@ Hyperspace: vanish ~1 s → random warp → ~1.5 s red/green flash at ~10 Hz wit
 There is no in-game menu, but you can retune the match in [`fpga/tang20k_lcd/src/sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh).  
 Change a `` `define ``, re-synthesize in Gowin, and reprogram the board.
 
-Common knobs:
+Common controls:
 
 | Define | What it does | Default (this tree) |
 |:------:|:------------:|:-------------------:|
@@ -152,7 +152,7 @@ Ships and shots **wrap** at the playfield edge. With a **red border** (black hol
 
 **Scanout stack** (back → front): star ROM → sun / black hole → 2-bit FB ink (Diamond green, AI yellow, shots white) → HUD → **GAME OVER** / **PUSH FIRE**. HUD digit, fuel, and flash fields are latched into FFs each clock. Hyperspace tints the Diamond in scanout.
 
-**Modules:** `sw_physics.v` (AI, gravity, shots, scores, hyperspace), `sw_draw.v` (erase / stroke), `sw_scanout.v` (LCD composite). `space_wars.v` is thin glue plus shared `sin_cos` / `fb_ram`. Shot bank: **8** slots (player 0–4, AI 5–7). Gameplay knobs: `sw_config.vh` (see **Tweaking gameplay**).
+**Modules:** `sw_physics.v` (AI, gravity, shots, scores, hyperspace), `sw_draw.v` (erase / stroke), `sw_scanout.v` (LCD composite). `space_wars.v` is thin glue plus shared `sin_cos` / `fb_ram`. Shot bank: **8** slots (player 0–4, AI 5–7). Gameplay controls: `sw_config.vh` (see **Tweaking gameplay**).
 
 **Framebuffer:** 800×470 **2-bit** BSRAM. Full 800×480×2 does not fit in 46 BSRAM, so the bottom 10 LCD lines stay black. One playfield page only; erase/redraw while physics frames may drop if draw is busy. FB writes are FF-pipelined (1 cycle).
 
@@ -179,7 +179,7 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 | `src/sw_physics.v` | Physics, AI, shot bank, scores, sun/BH, HS |
 | `src/sw_draw.v` | Erase / stroke ships / shots |
 | `src/sw_scanout.v` | HUD, stars, sun, FB color → RGB |
-| `src/sw_config.vh` | Gameplay `` `define `` knobs |
+| `src/sw_config.vh` | Gameplay `` `define `` controls |
 | `src/fb_ram.v` | 2-bit 800×470 BSRAM |
 | `src/sin_cos.v` | Quarter-wave sine / cosine |
 | `src/tang20k_lcd.cst` | Pin constraints |
