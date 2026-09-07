@@ -87,7 +87,8 @@ Keys are active-low. Dock buttons and DIP2–5 use a **1.5 V** bank (`LVCMOS15`)
 | S4 | C7 | Fire / start match |
 | DIP5 | T5 | Attract test when **down** (up = normal) |
 
-FPGA reset is **PLL lock only** (no button reset). Hyperspace: vanish ~1 s → random warp → ~1.5 s red/green flash at ~10 Hz with spawn invulnerability.
+FPGA reset is **PLL lock only** (no button reset).  
+Hyperspace: vanish ~1 s → random warp → ~1.5 s red/green flash at ~10 Hz with spawn invulnerability.
 
 ## Tweaking gameplay
 
