@@ -156,7 +156,8 @@ Play freezes; **GAME OVER** flashes (2 Hz, 50% duty) with **PUSH FIRE TO START**
 
 ## How it works
 
-**Scanout stack** (back → front): star ROM → sun / black hole → 2-bit FB ink (Diamond green, AI yellow, shots white) → HUD → **GAME OVER** / **PUSH FIRE**. HUD digit, fuel, and flash fields are latched into FFs each clock. Hyperspace tints the Diamond in scanout.
+**Scanout stack** (back → front): star ROM → sun / black hole → 2-bit FB ink (Diamond green,  
+AI yellow, shots white) → HUD → **GAME OVER** / **PUSH FIRE**. HUD digit, fuel, and flash fields are latched into FFs each clock. Hyperspace tints the Diamond in scanout.
 
 **Modules:** `sw_physics.v` (AI, gravity, shots, scores, hyperspace),  
 `sw_draw.v` (erase / stroke), `sw_scanout.v` (LCD composite).  
