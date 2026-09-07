@@ -22,6 +22,12 @@ See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
 <video src="https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664" controls autoplay muted loop playsinline width="100%"></video>
 
+## Play now (web)
+
+**[Launch the playable web version](https://dogma2u.github.io/tang-prime-web-space-wars/)**
+
+Open that link to run the game in your browser (no install, no FPGA board). Attract demo starts on load — press **Fire** (`Space` / `K`) for a 1:30 match.
+
 ## Ships
 
 On the LCD, outlines match these roles:
