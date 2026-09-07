@@ -4,6 +4,7 @@
 
 <img src="docs/important-box.svg" alt="IMPORTANT: Game over - end of the line. This FPGA is full. GAME OVER. Thanks for flying." width="860" />
 
+<p>&nbsp;</p>
 
 Want a different feel? Edit the knobs in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
 
