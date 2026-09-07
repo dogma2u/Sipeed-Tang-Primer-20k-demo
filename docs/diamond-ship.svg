@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="-25 -25 50 50">
   <rect x="-25" y="-25" width="50" height="50" fill="#000000"/>
-  <!-- Same framing as original wedge; scale so hull+flame ~wedge size; optical center -->
-  <g transform="translate(0,-3.5)">
-    <g transform="rotate(-90) scale(1.22)">
-      <polygon points="-10,0 -16,2.5 -20,0 -16,-2.5" fill="none" stroke="#f97316" stroke-width="0.8"/>
-      <polygon points="14,0 4,7 -2,3 -14,8 -10,0 -14,-8 -2,-3 4,-7" fill="none" stroke="#22c55e" stroke-width="0.8"/>
-      <line x1="-2" y1="3" x2="-10" y2="0" stroke="#22c55e" stroke-width="0.8"/>
-      <line x1="-2" y1="-3" x2="-10" y2="0" stroke="#22c55e" stroke-width="0.8"/>
-    </g>
+  <!-- Same 50x50 box as wedge; scale 1.22 so overall size matches wedge; centered -->
+  <g transform="translate(0,-3.5) rotate(-90) scale(1.22)">
+    <polygon points="-10,0 -16,2.5 -20,0 -16,-2.5" fill="none" stroke="#f97316" stroke-width="0.8"/>
+    <polygon points="14,0 4,7 -2,3 -14,8 -10,0 -14,-8 -2,-3 4,-7" fill="none" stroke="#22c55e" stroke-width="0.8"/>
+    <line x1="-2" y1="3" x2="-10" y2="0" stroke="#22c55e" stroke-width="0.8"/>
+    <line x1="-2" y1="-3" x2="-10" y2="0" stroke="#22c55e" stroke-width="0.8"/>
   </g>
 </svg>

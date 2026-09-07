@@ -33,7 +33,7 @@ Open that link to run the game in your browser (no install, no FPGA board). Attr
 <table align="center">
   <tr>
     <td align="center" valign="middle">
-      <img src="docs/diamond-ship.svg" alt="Diamond ship (player) — green outline on LCD" width="240" />
+      <img src="docs/diamond-ship.svg" alt="Diamond ship (player) — green outline on LCD" width="400" height="400" />
     </td>
     <td align="center" valign="middle">
       <p align="center">On the LCD, outlines match these roles:</p>
@@ -60,7 +60,7 @@ Open that link to run the game in your browser (no install, no FPGA board). Attr
       </table>
     </td>
     <td align="center" valign="middle">
-      <img src="docs/wedge-ship.svg" alt="Wedge ship (AI) — yellow outline on LCD" width="240" />
+      <img src="docs/wedge-ship.svg" alt="Wedge ship (AI) — yellow outline on LCD" width="400" height="400" />
     </td>
   </tr>
 </table>
