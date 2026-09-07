@@ -170,7 +170,8 @@ Gameplay controls: `sw_config.vh` (see **Tweaking gameplay**).
 
 **Ships / fire:** Vertex outlines via `sin_cos.v`, Q8.8 positions. Mag: **5 shots / ~500 ms**, then **500 ms** reload; one shot per tap. AI bullets live at most ~**75%** of player shot life. Max speed clamp: **`CFG_SHIP_MAXV` = 10** (all modes).
 
-**AI:** Elapsed playtime ramps range, standoff, aim, and thrust through **5:00**. Hunting uses ~**5°** heading bins (not 90° cardinal snaps), with wall and sun keep-out.
+**AI:** Elapsed playtime ramps range, standoff, aim, and thrust through **5:00**.  
+Hunting uses ~**5°** heading bins (not 90° cardinal snaps), with wall and sun keep-out.
 
 **Stars:** Constellation ROM in `star_field_rom.vh` — map **3200×470** (360°), screen shows **800** px (90°).  
 Any-angle drift with speed 0.5×–2× (4× when off-axis).  
