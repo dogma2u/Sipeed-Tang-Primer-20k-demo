@@ -74,7 +74,8 @@ Hyperspace flashes the Diamond **red/green** for about 1.5 s. Shots render **whi
 | Clock | 27 MHz on H11 → rPLL **33 MHz** pixel clock |
 | Tools | Gowin FPGA Designer (synthesize / program) |
 
-**DIP1 down** enables the core (required for flash / run). **DIP5 up** = normal attract; **DIP5 down** = attract **test mode** (you fly the Diamond, AI frozen; Fire shoots instead of starting a match).
+**DIP1 down** enables the core (required for flash / run).  
+**DIP5 up** = normal attract; **DIP5 down** = attract **test mode** (you fly the Diamond, AI frozen; Fire shoots instead of starting a match).
 
 Keys are active-low. Dock buttons and DIP2–5 use a **1.5 V** bank (`LVCMOS15`); LCD, clock, and reset use **3.3 V** (`LVCMOS33`).
 
