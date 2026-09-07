@@ -151,7 +151,8 @@ Ships and shots **wrap** at the playfield edge.
 With a **red border** (black hole), ships **bounce** instead.  
 The default rim is **black**.
 
-**Game over** when the timer hits **0:00** or the player has **no lives**. Play freezes; **GAME OVER** flashes (2 Hz, 50% duty) with **PUSH FIRE TO START** below.
+**Game over** when the timer hits **0:00** or the player has **no lives**.  
+Play freezes; **GAME OVER** flashes (2 Hz, 50% duty) with **PUSH FIRE TO START** below.
 
 ## How it works
 
