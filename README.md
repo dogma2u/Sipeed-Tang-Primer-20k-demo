@@ -213,7 +213,8 @@ Full **Resource Usage Summary**, utilization, clocks, Fmax, and critical-path du
 | Clock | rPLL 27 MHz → 33 MHz pixel | — |
 
 **Timing (not met):** constrained **33 MHz**; reported Fmax **~8.0 MHz** (~127 logic levels on the pixel clock).  
-The design **fits** and has been **board-tested**, but static timing does not close at 33 MHz — treat that as a known limit of this tree. See Path 1 in [`FPGA_Data.text`](FPGA_Data.text) (`lfsr` → `vel0_y`, slack **−94.962**).
+The design **fits** and has been **board-tested**, but static timing does not close at 33 MHz.  
+Treat that as a known limit of this tree. See Path 1 in [`FPGA_Data.text`](FPGA_Data.text) (`lfsr` → `vel0_y`, slack **−94.962**).
 
 ## License
 
