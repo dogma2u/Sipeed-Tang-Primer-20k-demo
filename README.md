@@ -20,7 +20,7 @@ See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
 **[Launch the playable web version](https://dogma2u.github.io/tang-prime-web-space-wars/)**
 
-Open that link to run the game in your browser (no install, no FPGA board).
+Open that link to run the game in your browser (no install, no FPGA board).  
 Attract demo starts on load — press **Fire** (`Space` / `K`) for a 1:30 match.
 
 ## Ships
