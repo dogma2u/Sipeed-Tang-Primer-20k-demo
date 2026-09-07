@@ -175,7 +175,8 @@ Hitting the sun (or black-hole / restored-sun core) **costs a player life**.
 After **10 shots** hit the sun it becomes a **black hole** with **1/r²** pull and a **red border**.  
 **5 player shots** into the hole restore the sun with outward **1/r²** push for **10 s**, then gravity clears.
 
-**Ships / fire:** Vertex outlines via `sin_cos.v`, Q8.8 positions. Mag: **5 shots / ~500 ms**, then **500 ms** reload; one shot per tap. AI bullets live at most ~**75%** of player shot life. Max speed clamp: **`CFG_SHIP_MAXV` = 10** (all modes).
+**Ships / fire:** Vertex outlines via `sin_cos.v`, Q8.8 positions. Mag: **5 shots / ~500 ms**,  
+then **500 ms** reload; one shot per tap. AI bullets live at most ~**75%** of player shot life. Max speed clamp: **`CFG_SHIP_MAXV` = 10** (all modes).
 
 **AI:** Elapsed playtime ramps range, standoff, aim, and thrust through **5:00**.  
 Hunting uses ~**5°** heading bins (not 90° cardinal snaps), with wall and sun keep-out.
