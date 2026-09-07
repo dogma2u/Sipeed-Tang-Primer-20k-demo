@@ -120,12 +120,16 @@ On boot and after **GAME OVER**, an **attract demo** runs: both ships are AI-con
 
 Pong-style **block digits** along the top:
 
+<div align="left">
+
 - **Player** score on the left, **AI** score on the right (light blue)
 - Center **MM:SS** countdown (packed as `MM×100+SS`; each field **0…59**, max **59:59**; match starts at **01:30**)
 - Timer turns **yellow** under 0:30 and **red** under 0:10
 - Scores are three digits with leading-zero blanking (**−999…999**; wrap **999 → 0**). Negative scores show a minus bar
 - Under the player score: **wedge life icons** (start 3, max 5). Every **5 AI kills** grants an extra life if under the cap
 - Beside the player score: a **vertical fuel bar** (**15 s** of thrust) — green, yellow at ≤10%, red at ≤5%. Empty fuel blocks thrust until respawn. The AI has unlimited lives
+
+</div>
 
 | Event | Player | AI | Timer |
 |:-----:|:------:|:--:|:-----:|
@@ -179,9 +183,13 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 
 ## Build
 
+<div align="left">
+
 1. Open `fpga/tang20k_lcd/tang20k_lcd.gprj` in Gowin FPGA Designer.
 2. Synthesize / place & route for **GW2A-LV18PG256C8/I7**.
 3. Program the Dock with **DIP1 down** and the LCD seated.
+
+</div>
 
 If you keep a separate Gowin tree, copy all of `fpga/tang20k_lcd/src/*.v` **and** `sw_config.vh`. Keep `sw_config.vh` on the FileList. See `docs/Gowin-copy-bsram.txt`.
 
