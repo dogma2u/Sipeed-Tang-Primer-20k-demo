@@ -94,7 +94,8 @@ Hyperspace: vanish ~1 s → random warp → ~1.5 s red/green flash at ~10 Hz wit
 
 ## Tweaking gameplay
 
-There is no in-game menu, but you can retune the match in [`fpga/tang20k_lcd/src/sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh). Change a `` `define ``, re-synthesize in Gowin, and reprogram the board.
+There is no in-game menu, but you can retune the match in [`fpga/tang20k_lcd/src/sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh).  
+Change a `` `define ``, re-synthesize in Gowin, and reprogram the board.
 
 Common knobs:
 
