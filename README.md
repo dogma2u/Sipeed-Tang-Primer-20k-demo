@@ -105,7 +105,8 @@ Hyperspace: vanish ~1 s → random warp → ~1.5 s red/green flash at ~10 Hz wit
 
 I brought this up in steps on the Tang Primer 20K Dock + LCD.  
 I started from a color-bar test on the LCD and drew a 5-pixel box around the active area.  
-Once pixel timing was solid, I designed a ship, moved it on screen, and found I needed a framebuffer to hold the playfield.
+Once pixel timing was solid, I designed a ship, moved it on screen,  
+and found I needed a framebuffer to hold the playfield.
 
 As the game grew, I added test points and wrote checks in the HDL to catch broken behavior early. To validate game rules without a full fight, I needed the AI off my back — **DIP5 down** freezes the AI Wedge so I can fly, shoot, and exercise hyperspace alone; **DIP5 up** restores normal attract / match AI.
 
