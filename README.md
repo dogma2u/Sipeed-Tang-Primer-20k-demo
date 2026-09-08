@@ -6,8 +6,6 @@
 
 <p>&nbsp;</p>
 
-Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/src/sw_config.vh) (see **Tweaking gameplay** below).
-
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
 This is my very first FPGA design, and I built it in just a few days.  
