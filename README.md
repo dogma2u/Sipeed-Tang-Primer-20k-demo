@@ -113,8 +113,8 @@ To validate game rules without a full fight, I needed the AI off my back — **D
 
 When the LCD looks wrong, I still debug by layer: timing and video first,  
 then motion/buffer, then rules and AI, then HUD/scanout.  
-Known-good savepoints and Gowin util / timing reports are the budget check —  
-this release is board-validated even though static timing does not close at 33 MHz.
+Known-good savepoints and Gowin util / timing reports are the budget check.  
+This release is board-validated even though static timing does not close at 33 MHz.
 
 ## Tweaking gameplay
 
