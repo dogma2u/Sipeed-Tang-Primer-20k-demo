@@ -11,8 +11,7 @@
 This is my very first FPGA design, and I built it in just a few days.  
 AI helped with Verilog edits and GitHub updates. I owned the architecture, bring-up plan, game rules, trade-offs, and the call to stop at 1.01.DONE when the chip was full.  
 There were many trade-offs in this design, and these choices led to the path I took.  
-I drew inspiration from the classic, without copying it, to bring a modern FPGA take into the light.  
-It had been on my mind for a long time.
+I drew inspiration from the classic, without copying it, to bring a modern FPGA take into the light.
 
 Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
 You fly the diamond-shaped ship (green) and AI flies a wedge-shaped ship (yellow).  
