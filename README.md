@@ -13,12 +13,12 @@ Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/sr
 This is my very first FPGA design, and I built it in just a few days.  
 I used AI to help with coding and pushing updates to GitHub,  
 but the system architecture, debugging strategies, and game planning were my own.  
-There were many trade-offs in this design, and these choices lead to the path I took.  
-I did copy the work of others, but did want to bring a more modern game to light.  
-As this has been on my mind for some time.
+There were many trade-offs in this design, and these choices led to the path I took.  
+I drew inspiration from the classic, without copying it, to bring a modern FPGA take into the light.  
+It had been on my mind for a long time.
 
 Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
-You fly the Diamond shaped ship (green) and AI flies a wedge shaped ship (Yellow).  
+You fly the diamond-shaped ship (green) and AI flies a wedge-shaped ship (yellow).  
 AI hunts and shoots at you, and is more aggressive as time goes on.  
 Vector outlines, orange sun / black hole, bounce walls, scores, fuel, and a countdown.
 
@@ -86,7 +86,7 @@ Hyperspace flashes the Diamond **red/green** for about 1.5 s. Shots render **whi
 
 **DIP1 down** enables the core (required for flash / run).  
 **DIP5 up** = normal attract; **DIP5 down** = attract **test mode**  
-You fly the Diamond ship, AI Wedge ship is frozen. But you can fly and shoot.
+You fly the Diamond; the AI Wedge is frozen, but you can still fly and shoot.
 
 Keys are active-low. Dock buttons and DIP2–5 use a **1.5 V** bank (`LVCMOS15`); LCD, clock, and reset use **3.3 V** (`LVCMOS33`).
 
