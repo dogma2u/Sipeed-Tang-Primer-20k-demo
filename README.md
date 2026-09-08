@@ -14,7 +14,8 @@ This is my very first FPGA design, and I built it in just a few days.
 I used AI to help with coding and pushing updates to GitHub,  
 but the system architecture, debugging strategies, and game planning were my own.  
 There were many trade-offs in this design, and these choices lead to the path I took.  
-I did not want to copy the work of others, but did want to capture the feel, but under a more modern light.
+I did copy the work of others, but did want to bring a more modern game to light.  
+As this has been on my mind for some time.
 
 Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
 You fly the Diamond shaped ship (green) and AI flies a wedge shaped ship (Yellow).  
