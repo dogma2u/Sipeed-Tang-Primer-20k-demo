@@ -172,6 +172,11 @@ Play freezes; **GAME OVER** flashes (2 Hz, 50% duty) with **PUSH FIRE TO START**
 
 ## How it works
 
+Short version: physics updates the match, draw strokes ships/shots into a 2-bit framebuffer, and scanout composites stars, sun, FB ink, and HUD onto the LCD every pixel clock.
+
+<details>
+<summary><strong>Modules, framebuffer, sun, ships, AI, stars, and source files (detail)</strong></summary>
+
 **Scanout stack** (back → front): star ROM → sun / black hole → 2-bit FB ink (Diamond green,  
 AI yellow, shots white) → HUD → **GAME OVER** / **PUSH FIRE**.  
 HUD digit, fuel, and flash fields are latched into FFs each clock.  
@@ -204,7 +209,7 @@ Overlay sits **under** ships and shots.
 
 Per-frame flow (simplified): physics → collisions / sun / shots → erase old vectors → stroke ships → shot streaks.
 
-## Source (Gowin build)
+### Source (Gowin build)
 
 Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj)
 
@@ -222,6 +227,8 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 | `src/sin_cos.v` | Quarter-wave sine / cosine |
 | `src/tang20k_lcd.cst` | Pin constraints |
 | `src/tang20k_lcd.sdc` | Clock constraint |
+
+</details>
 
 ## Build
 
