@@ -79,7 +79,7 @@ Hyperspace flashes the Diamond **red/green** for about 1.5 s. Shots render **whi
 
 **DIP1 down** enables the core (required for flash / run).  
 **DIP5 up** = normal attract; **DIP5 down** = attract **test mode**  
-(you fly the Diamond, AI frozen; Fire shoots instead of starting a match).
+You fly the Diamond ship, AI Wedge ship is frozen. But you can fly and shoot.
 
 Keys are active-low. Dock buttons and DIP2–5 use a **1.5 V** bank (`LVCMOS15`); LCD, clock, and reset use **3.3 V** (`LVCMOS33`).
 
