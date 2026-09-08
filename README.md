@@ -112,7 +112,9 @@ As the game grew, I added test points and wrote checks in the HDL to catch broke
 To validate game rules without a full fight, I needed the AI off my back — **DIP5 down** freezes the AI Wedge so I can fly, shoot, and exercise hyperspace alone; **DIP5 up** restores normal attract / match AI.
 
 When the LCD looks wrong, I still debug by layer: timing and video first, then motion/buffer, then rules and AI,  
-then HUD/scanout. Known-good savepoints and Gowin util / timing reports are the budget check — this release is board-validated even though static timing does not close at 33 MHz.
+then HUD/scanout.  
+Known-good savepoints and Gowin util / timing reports are the budget check —  
+this release is board-validated even though static timing does not close at 33 MHz.
 
 ## Tweaking gameplay
 
