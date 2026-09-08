@@ -245,6 +245,19 @@ You need: Gowin FPGA Designer, a Tang Primer 20K **Dock**, the 5" RGB LCD seated
 If you keep a separate Gowin tree, copy all of `fpga/tang20k_lcd/src/*.v` **and** `sw_config.vh`.  
 Keep `sw_config.vh` on the FileList. See `docs/Gowin-copy-bsram.txt`.
 
+## Simulation (optional)
+
+A small unit test for the shared angle LUT lives at [`fpga/tang20k_lcd/sim/tb_sin_cos.v`](fpga/tang20k_lcd/sim/tb_sin_cos.v).  
+With Icarus Verilog:
+
+```text
+cd fpga/tang20k_lcd/sim
+iverilog -o tb_sin_cos.vvp ../src/sin_cos.v tb_sin_cos.v
+vvp tb_sin_cos.vvp
+```
+
+Expect `tb_sin_cos: PASS`. Full-game behavior is validated on the Dock (see **Board bring-up / debug**); this TB only checks `sin_cos`.
+
 ## Synth snapshot (GW2A-18C)
 
 Latest Gowin report (DIP5 + timer 59:59 + finer `want_facing`).  
