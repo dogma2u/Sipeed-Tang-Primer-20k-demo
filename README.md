@@ -23,6 +23,8 @@ Vector outlines, orange sun / black hole, bounce walls, scores, fuel, and a coun
 
 See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
+More about me: [k9dtv.com](https://k9dtv.com/) · [James Burney — about / contact](https://dogma2u.wixsite.com/mysite)
+
 <video src="https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664" controls autoplay muted loop playsinline width="100%"></video>
 
 ## Play now (web)
