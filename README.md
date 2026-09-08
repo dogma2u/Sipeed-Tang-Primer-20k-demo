@@ -11,7 +11,8 @@ Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/sr
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
 This is my very first FPGA design, and I built it in just a few days.  
-I used AI to help with coding and pushing updates to GitHub, but the system architecture, debugging strategies, and game planning were my own.
+I used AI to help with coding and pushing updates to GitHub,  
+but the system architecture, debugging strategies, and game planning were my own.
 
 Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
 You fly the Diamond shaped ship (green) and AI flies a wedge shaped ship (Yellow).  
