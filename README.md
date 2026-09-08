@@ -231,11 +231,14 @@ Project: [`fpga/tang20k_lcd/tang20k_lcd.gprj`](fpga/tang20k_lcd/tang20k_lcd.gprj
 
 ## Build
 
+You need: Gowin FPGA Designer, a Tang Primer 20K **Dock**, the 5" RGB LCD seated, and this repo.
+
 <div align="left">
 
 1. Open `fpga/tang20k_lcd/tang20k_lcd.gprj` in Gowin FPGA Designer.
 2. Synthesize / place & route for **GW2A-LV18PG256C8/I7**.
-3. Program the Dock with **DIP1 down** and the LCD seated.
+3. Set **DIP1 down**, keep the LCD seated, then program the Dock.
+4. On success you should see attract (or test mode if **DIP5 down**). Press **Fire** to start a 1:30 match.
 
 </div>
 
