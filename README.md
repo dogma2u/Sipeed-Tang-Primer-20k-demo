@@ -13,7 +13,7 @@ Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/sr
 This is my very first FPGA design, and I built it in just a few days.  
 I used AI to help with coding and pushing updates to GitHub,  
 but the system architecture, debugging strategies, and game planning were my own.  
-There were many trade-offs in this design, and these choices led to the path I took.  
+There were many trade-offs in this design, and these choices lead to the path I took.  
 I did not want to copy the work of others, but did want to capture the feel, but under a more modern light.
 
 Original HDL game inspired by the 1977 *Space Wars* arcade (sun, thrust, shots) — not a ROM dump.  
