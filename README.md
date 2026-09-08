@@ -11,8 +11,7 @@ Want a different feel? Edit the controls in [`sw_config.vh`](fpga/tang20k_lcd/sr
 **Version 1.01.DONE** — board-tested on the Tang Primer 20K Dock + 5" LCD. Final release for this FPGA (chip is full).
 
 This is my very first FPGA design, and I built it in just a few days.  
-I used AI to help with coding and pushing updates to GitHub,  
-but the system architecture, debugging strategies, and game planning were my own.  
+AI helped with Verilog edits and GitHub updates. I owned the architecture, bring-up plan, game rules, trade-offs, and the call to stop at 1.01.DONE when the chip was full.  
 There were many trade-offs in this design, and these choices led to the path I took.  
 I drew inspiration from the classic, without copying it, to bring a modern FPGA take into the light.  
 It had been on my mind for a long time.
