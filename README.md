@@ -22,7 +22,7 @@ See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
 More about me: [k9dtv.com](https://k9dtv.com/) · [James Burney](https://dogma2u.wixsite.com/mysite)
 
-<video src="docs/game.mp4" controls autoplay muted loop playsinline width="100%"></video>
+<video src="https://github.com/dogma2u/space-wars-tang-primer-20k/releases/download/demo-assets/game.mp4" controls autoplay muted loop playsinline width="100%"></video>
 
 ## Play now (web)
 
