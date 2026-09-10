@@ -20,13 +20,13 @@ Vector outlines, orange sun / black hole, bounce walls, scores, fuel, and a coun
 
 See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
-More about me: [k9dtv.com](https://k9dtv.com/) · [James Burney](https://dogma2u.wixsite.com/mysite)
+**Project page:** https://k9dtv.com/project-space-wars.html · **Site:** [k9dtv.com](https://k9dtv.com/) · [James Burney](https://dogma2u.wixsite.com/mysite)
 
 <video src="https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664" controls autoplay muted loop playsinline width="100%"></video>
 
 ## Play now (web)
 
-**[Launch the playable web version](https://dogma2u.github.io/tang-prime-web-space-wars/)**
+**[Launch the playable web version](https://k9dtv.com/space-wars-web/)** ([GitHub Pages mirror](https://dogma2u.github.io/tang-prime-web-space-wars/))
 
 Open that link to run the game in your browser (no install, no FPGA board).  
 Attract demo starts on load — press **Fire** (`Space` / `K`) for a 1:30 match.
