@@ -22,8 +22,6 @@ See [CHANGELOG.md](CHANGELOG.md) and [VERSION](VERSION).
 
 **Project page:** https://k9dtv.com/project-space-wars.html · **Site:** [k9dtv.com](https://k9dtv.com/)
 
-**Keywords:** K9DTV, k9dtv.com, embedded systems, electronics, FPGA, Space Wars, Sipeed Tang Primer 20K, Gowin, Verilog, browser game, MiniMe, ESP32-S3, Discord bot, OLED, Hello World 3D, RP2350, SSD1306, Lissajous, Raspberry Pi Pico, MicroPython, Pimoroni, Wi-Fi demo, PDSP1880, 3-bank display, Arduino Pro Mini, AD9850, DDS, signal generator, rotary encoder
-
 <video src="https://github.com/user-attachments/assets/6ea7ac7b-8eb3-4649-b89f-231c46eaa664" controls autoplay muted loop playsinline width="100%"></video>
 
 ## Play now (web)
